@@ -187,3 +187,14 @@ Four interconnected pillars based on the sleep-time compute concept:
 * Agent teams — persistent collaborative groups with shared objectives, role-based coordination, dependency-aware scheduling, shared context/artifacts, and team-level observability. Multiple teams run concurrently across different domains.
 * Design generation — agent produces multiple wireframe/UI variations as Svelte artifacts for user selection on the task board, chosen design feeds back into implementation
 * Repo management — self-improvement team also handles GitHub releases, README updates, documentation generation, issue triage, demo assets, and community promotion
+* Task-level chat threads — scoped conversation on each task card for iterative feedback between user and agent
+* Changes requested state — drag-back workflow with comment, agent iterates and resubmits
+* Review type classification — heavy (code/features), quick (emails/drafts), informational (reports/alerts) with different UI experiences per type
+* Review queue — mobile-first swipe interface for quick approvals, separate from full Kanban
+* Pipeline view — horizontal swimlane showing team workflow stages end to end
+* Project board — high-level view across teams with shipping timeline and cost/velocity metrics
+* Activity feed — chronological stream of all agent activity across teams for passive monitoring
+* Test runner service — sandbox runs Playwright against DrokBot, structured results on task runs
+* Test recording artifacts — video and screenshots from test runs stored on task records for visual verification
+* Test gate enforcement — failing tests block approval, passing tests required for auto-approve
+* Agent-written tests — coding agent writes Playwright tests as part of every implementation task
