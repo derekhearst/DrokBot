@@ -1,0 +1,91 @@
+@import 'tailwindcss';
+@plugin 'daisyui';
+
+@plugin 'daisyui/theme' {
+	name: 'drokbot';
+	default: true;
+	prefersdark: false;
+	color-scheme: light;
+	--color-base-100: oklch(98% 0.02 95);
+	--color-base-200: oklch(95% 0.035 92);
+	--color-base-300: oklch(90% 0.03 90);
+	--color-base-content: oklch(28% 0.03 260);
+	--color-primary: oklch(62% 0.22 24);
+	--color-primary-content: oklch(98% 0.01 95);
+	--color-secondary: oklch(66% 0.19 182);
+	--color-secondary-content: oklch(98% 0.02 180);
+	--color-accent: oklch(70% 0.16 316);
+	--color-accent-content: oklch(16% 0.03 316);
+	--color-neutral: oklch(32% 0.03 260);
+	--color-neutral-content: oklch(95% 0.01 80);
+	--color-info: oklch(71% 0.16 238);
+	--color-success: oklch(73% 0.19 154);
+	--color-warning: oklch(79% 0.17 84);
+	--color-error: oklch(66% 0.23 28);
+	--radius-selector: 0.9rem;
+	--radius-field: 0.75rem;
+	--radius-box: 1.1rem;
+	--size-selector: 0.24rem;
+	--size-field: 0.24rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+@plugin 'daisyui/theme' {
+	name: 'drokbot-night';
+	default: false;
+	prefersdark: true;
+	color-scheme: dark;
+	--color-base-100: oklch(20% 0.02 258);
+	--color-base-200: oklch(24% 0.03 258);
+	--color-base-300: oklch(30% 0.03 260);
+	--color-base-content: oklch(92% 0.02 90);
+	--color-primary: oklch(70% 0.2 24);
+	--color-primary-content: oklch(22% 0.03 250);
+	--color-secondary: oklch(71% 0.17 182);
+	--color-secondary-content: oklch(20% 0.03 182);
+	--color-accent: oklch(74% 0.14 316);
+	--color-accent-content: oklch(22% 0.03 316);
+	--color-neutral: oklch(30% 0.02 260);
+	--color-neutral-content: oklch(92% 0.02 90);
+	--color-info: oklch(73% 0.15 238);
+	--color-success: oklch(74% 0.17 154);
+	--color-warning: oklch(81% 0.14 84);
+	--color-error: oklch(71% 0.2 28);
+	--radius-selector: 0.9rem;
+	--radius-field: 0.75rem;
+	--radius-box: 1.1rem;
+	--size-selector: 0.24rem;
+	--size-field: 0.24rem;
+	--border: 1px;
+	--depth: 1;
+	--noise: 0;
+}
+
+:root {
+	background:
+		radial-gradient(circle at 12% -10%, color-mix(in oklab, var(--color-secondary) 24%, transparent), transparent 36%),
+		radial-gradient(circle at 82% 120%, color-mix(in oklab, var(--color-primary) 20%, transparent), transparent 44%),
+		linear-gradient(180deg, var(--color-base-200), var(--color-base-200));
+	min-height: 100%;
+}
+
+body {
+	font-family: 'Segoe UI Variable Text', 'Aptos', 'Trebuchet MS', sans-serif;
+	background: transparent;
+	color: var(--color-base-content);
+	min-height: 100vh;
+	animation: shell-fade 280ms ease-out;
+}
+
+@keyframes shell-fade {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

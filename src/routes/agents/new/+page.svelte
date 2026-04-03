@@ -1,0 +1,67 @@
+<script lang="ts">
+	import { goto } from '$app/navigation';
+	import { createAgent } from '$lib/agents/agents.remote';
+
+	let name = $state('');
+	let role = $state('Research and implementation specialist');
+	let model = $state('anthropic/claude-sonnet-4');
+	let systemPrompt = $state('You are a focused autonomous coding agent. Produce clear, testable outcomes.');
+	let busy = $state(false);
+	let error = $state<string | null>(null);
+
+	async function handleSubmit() {
+		if (!name.trim() || !role.trim() || !systemPrompt.trim() || busy) return;
+		busy = true;
+		error = null;
+		try {
+			const created = await createAgent({
+				name: name.trim(),
+				role: role.trim(),
+				systemPrompt: systemPrompt.trim(),
+				model: model.trim(),
+			});
+			await goto(`/agents/${created.id}`);
+		} catch (cause) {
+			error = cause instanceof Error ? cause.message : 'Failed to create agent';
+		} finally {
+			busy = false;
+		}
+	}
+</script>
+
+<section class="space-y-4">
+	<a class="btn btn-sm btn-ghost" href="/agents">Back to agents</a>
+	<header>
+		<h1 class="text-3xl font-bold">Create Agent</h1>
+		<p class="text-sm text-base-content/70">Define role, model, and operating prompt.</p>
+	</header>
+
+	<form
+		class="space-y-3 rounded-2xl border border-base-300 bg-base-100 p-4"
+		onsubmit={(e) => {
+			e.preventDefault();
+			void handleSubmit();
+		}}
+	>
+		<label class="form-control">
+			<span class="label-text">Name</span>
+			<input class="input input-bordered" bind:value={name} placeholder="Ops Architect" />
+		</label>
+		<label class="form-control">
+			<span class="label-text">Role</span>
+			<input class="input input-bordered" bind:value={role} />
+		</label>
+		<label class="form-control">
+			<span class="label-text">Model</span>
+			<input class="input input-bordered" bind:value={model} />
+		</label>
+		<label class="form-control">
+			<span class="label-text">System prompt</span>
+			<textarea class="textarea textarea-bordered h-40" bind:value={systemPrompt}></textarea>
+		</label>
+		{#if error}
+			<p class="text-sm text-error">{error}</p>
+		{/if}
+		<button class="btn btn-primary" type="submit" disabled={busy}>Create Agent</button>
+	</form>
+</section>
