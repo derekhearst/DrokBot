@@ -185,3 +185,4 @@ Four interconnected pillars based on the sleep-time compute concept:
 * Coding harness — built-in CLI agent with VS Code Remote integration for reviewing agent work
 * Self-improvement loop — research agent finds features, coding agent implements them, user approves via task board
 * Agent teams — persistent collaborative groups with shared objectives, role-based coordination, dependency-aware scheduling, shared context/artifacts, and team-level observability. Multiple teams run concurrently across different domains.
+* Design generation — agent produces multiple wireframe/UI variations as Svelte artifacts for user selection on the task board, chosen design feeds back into implementation
