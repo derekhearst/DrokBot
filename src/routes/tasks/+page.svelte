@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getAgentChoices, runSchedulerTickCommand } from '$lib/agents/agents.remote';
-	import { listTasks, setTaskStatus } from '$lib/tasks/tasks.remote';
+	import { listTasks, setTaskPriority, setTaskStatus } from '$lib/tasks/tasks.remote';
 
 	type TaskRow = Awaited<ReturnType<typeof listTasks>>[number];
 	type AgentChoice = Awaited<ReturnType<typeof getAgentChoices>>[number];
@@ -28,6 +28,11 @@
 
 	async function moveTask(taskId: string, status: TaskRow['status']) {
 		await setTaskStatus({ taskId, status });
+		await refresh();
+	}
+
+	async function updatePriority(taskId: string, next: number) {
+		await setTaskPriority({ taskId, priority: Math.max(0, Math.min(5, next)) });
 		await refresh();
 	}
 
@@ -69,7 +74,10 @@
 							<article class="rounded-xl border border-base-300 p-3 text-sm">
 								<a class="font-medium hover:underline" href={`/tasks/${task.id}`}>{task.title}</a>
 								<p class="text-xs text-base-content/70">{task.agentName}</p>
+								<p class="text-xs text-base-content/70">priority {task.priority}</p>
 								<div class="mt-2 flex flex-wrap gap-1">
+									<button class="btn btn-xs" type="button" onclick={() => updatePriority(task.id, task.priority + 1)}>P+</button>
+									<button class="btn btn-xs" type="button" onclick={() => updatePriority(task.id, task.priority - 1)}>P-</button>
 									{#if status !== 'pending'}
 										<button class="btn btn-xs" type="button" onclick={() => moveTask(task.id, 'pending')}>Pending</button>
 									{/if}
@@ -78,6 +86,9 @@
 									{/if}
 									{#if status !== 'completed'}
 										<button class="btn btn-xs" type="button" onclick={() => moveTask(task.id, 'completed')}>Done</button>
+									{/if}
+									{#if status !== 'failed'}
+										<button class="btn btn-xs btn-error btn-outline" type="button" onclick={() => moveTask(task.id, 'failed')}>Fail</button>
 									{/if}
 								</div>
 							</article>

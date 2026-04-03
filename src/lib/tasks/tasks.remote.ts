@@ -32,10 +32,7 @@ export const listTasks = query(listTasksSchema, async ({ status, agentId, limit 
 		.select()
 		.from(agentTasks)
 		.where(
-			and(
-				status ? eq(agentTasks.status, status) : undefined,
-				agentId ? eq(agentTasks.agentId, agentId) : undefined,
-			),
+			and(status ? eq(agentTasks.status, status) : undefined, agentId ? eq(agentTasks.agentId, agentId) : undefined),
 		)
 		.orderBy(desc(agentTasks.priority), asc(agentTasks.createdAt))
 		.limit(limit ?? 200)
@@ -53,7 +50,11 @@ export const getTask = query(taskIdSchema, async (taskId) => {
 	const [task] = await db.select().from(agentTasks).where(eq(agentTasks.id, taskId)).limit(1)
 	if (!task) return null
 
-	const [agent] = await db.select({ id: agents.id, name: agents.name, status: agents.status }).from(agents).where(eq(agents.id, task.agentId)).limit(1)
+	const [agent] = await db
+		.select({ id: agents.id, name: agents.name, status: agents.status })
+		.from(agents)
+		.where(eq(agents.id, task.agentId))
+		.limit(1)
 	return {
 		task,
 		agent: agent ?? null,
@@ -73,11 +74,7 @@ export const setTaskStatus = command(setTaskStatusSchema, async ({ taskId, statu
 })
 
 export const setTaskPriority = command(setTaskPrioritySchema, async ({ taskId, priority }) => {
-	const [updated] = await db
-		.update(agentTasks)
-		.set({ priority })
-		.where(eq(agentTasks.id, taskId))
-		.returning()
+	const [updated] = await db.update(agentTasks).set({ priority }).where(eq(agentTasks.id, taskId)).returning()
 	return updated
 })
 

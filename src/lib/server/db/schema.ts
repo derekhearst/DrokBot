@@ -143,3 +143,13 @@ export const notifications = pgTable('notifications', {
 	read: boolean('read').notNull().default(false),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+	endpoint: text('endpoint').notNull(),
+	keys: jsonb('keys').$type<{ p256dh: string; auth: string }>().notNull(),
+	deviceLabel: text('device_label'),
+	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+})

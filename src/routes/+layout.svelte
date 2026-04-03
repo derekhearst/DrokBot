@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import Sidebar from '$lib/components/ui/Sidebar.svelte';
 	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
 	import ColorChip from '$lib/components/ui/ColorChip.svelte';
@@ -31,6 +33,13 @@
 	function handleQuickPrompt(value: string) {
 		console.log('Quick prompt:', value);
 	}
+
+	onMount(() => {
+		if (!browser || !('serviceWorker' in navigator)) return;
+		void navigator.serviceWorker.register('/service-worker.js').catch(() => {
+			// Ignore registration failures in unsupported contexts.
+		});
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>

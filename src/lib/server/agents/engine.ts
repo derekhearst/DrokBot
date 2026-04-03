@@ -198,7 +198,12 @@ export async function createTaskForAvailableAgent(title: string, description: st
 		.limit(1)
 
 	if (!agent) {
-		const [fallback] = await db.select().from(agents).where(eq(agents.status, 'idle')).orderBy(asc(agents.createdAt)).limit(1)
+		const [fallback] = await db
+			.select()
+			.from(agents)
+			.where(eq(agents.status, 'idle'))
+			.orderBy(asc(agents.createdAt))
+			.limit(1)
 		if (!fallback) {
 			throw new Error('No available agent to assign task')
 		}

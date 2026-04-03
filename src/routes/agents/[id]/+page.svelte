@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { createTask, getAgent, runTaskNow, updateAgentStatus } from '$lib/agents/agents.remote';
+	import { createTask, delegateTask, getAgent, getAgentChoices, runTaskNow, updateAgentStatus } from '$lib/agents/agents.remote';
 
 	const agentId = $derived(page.params.id ?? '');
 	let data = $state<Awaited<ReturnType<typeof getAgent>> | null>(null);
+	let agentChoices = $state<Awaited<ReturnType<typeof getAgentChoices>>>([]);
 	let title = $state('');
 	let description = $state('');
+	let delegateAgentId = $state('');
+	let delegateTaskText = $state('');
 	let busy = $state(false);
 
 	onMount(() => {
@@ -15,7 +18,13 @@
 
 	async function refresh() {
 		if (!agentId) return;
-		data = await getAgent(agentId);
+		const [agentData, choices] = await Promise.all([getAgent(agentId), getAgentChoices()]);
+		data = agentData;
+		const filtered = choices.filter((choice) => choice.id !== agentId);
+		agentChoices = filtered;
+		if (!delegateAgentId && filtered.length > 0) {
+			delegateAgentId = filtered[0].id;
+		}
 	}
 
 	async function changeStatus(status: 'active' | 'paused' | 'idle') {
@@ -52,6 +61,21 @@
 			busy = false;
 		}
 	}
+
+	async function delegateTaskAction() {
+		if (!delegateAgentId || !delegateTaskText.trim() || busy) return;
+		busy = true;
+		try {
+			await delegateTask({
+				agentId: delegateAgentId,
+				task: delegateTaskText.trim(),
+			});
+			delegateTaskText = '';
+			await refresh();
+		} finally {
+			busy = false;
+		}
+	}
 </script>
 
 {#if !data}
@@ -83,6 +107,25 @@
 			</div>
 		</section>
 
+		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
+			<h2 class="font-semibold">Delegate Task To Another Agent</h2>
+			<div class="mt-2 grid gap-2">
+				<select class="select select-bordered" bind:value={delegateAgentId}>
+					{#if agentChoices.length === 0}
+						<option value="">No other agents available</option>
+					{:else}
+						{#each agentChoices as choice (choice.id)}
+							<option value={choice.id}>{choice.name} ({choice.status})</option>
+						{/each}
+					{/if}
+				</select>
+				<textarea class="textarea textarea-bordered h-24" bind:value={delegateTaskText} placeholder="Delegated task details"></textarea>
+				<button class="btn btn-outline" type="button" onclick={delegateTaskAction} disabled={busy || agentChoices.length === 0}>
+					Delegate
+				</button>
+			</div>
+		</section>
+
 		<section class="grid gap-4 lg:grid-cols-2">
 			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
 				<h2 class="font-semibold">Tasks</h2>
@@ -96,6 +139,9 @@
 									<div>
 										<p class="font-medium">{task.title}</p>
 										<p class="text-xs text-base-content/70">{task.status} | p{task.priority}</p>
+										{#if typeof task.result === 'object' && task.result && 'summary' in task.result}
+											<p class="mt-1 line-clamp-3 text-xs text-base-content/70">{String(task.result.summary)}</p>
+										{/if}
 									</div>
 									{#if task.status === 'pending'}
 										<button class="btn btn-xs" type="button" onclick={() => runTask(task.id)}>Run</button>

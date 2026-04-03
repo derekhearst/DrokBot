@@ -157,5 +157,14 @@
 			<h2 class="font-semibold">Diff</h2>
 			<pre class="mt-2 max-h-[420px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{diff || 'No diff available'}</pre>
 		</section>
+
+		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
+			<h2 class="font-semibold">Execution Result</h2>
+			{#if typeof detail.task.result === 'object' && detail.task.result}
+				<pre class="mt-2 max-h-[260px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(detail.task.result, null, 2)}</pre>
+			{:else}
+				<p class="mt-2 text-sm text-base-content/70">No execution metadata yet.</p>
+			{/if}
+		</section>
 	</section>
 {/if}

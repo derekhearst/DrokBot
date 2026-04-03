@@ -86,11 +86,7 @@ export const createAgent = command(createAgentSchema, async (input) => {
 })
 
 export const updateAgentStatus = command(updateAgentStatusSchema, async ({ agentId, status }) => {
-	const [updated] = await db
-		.update(agents)
-		.set({ status })
-		.where(eq(agents.id, agentId))
-		.returning()
+	const [updated] = await db.update(agents).set({ status }).where(eq(agents.id, agentId)).returning()
 	return updated
 })
 
