@@ -34,7 +34,7 @@ RUN bun install --frozen-lockfile
 # ---------- build ----------
 FROM deps AS build
 COPY . .
-RUN bun run build
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" bun run build
 
 # ---------- production ----------
 FROM base AS production
