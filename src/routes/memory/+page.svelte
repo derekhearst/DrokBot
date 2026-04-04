@@ -2,7 +2,7 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { listDreamCyclesQuery, runDreamCycleCommand } from '$lib/memory/dream.remote';
+	import { listDreamCyclesQuery, runDreamCycleCommand } from '$lib/memory';
 	import {
 		createMemoryCommand,
 		deleteMemoryCommand,
@@ -11,7 +11,7 @@
 		searchMemoriesQuery,
 		unpinMemoryCommand,
 		updateMemoryCommand
-	} from '$lib/memory/memory.remote';
+	} from '$lib/memory';
 
 	type MemoryRow = Awaited<ReturnType<typeof listMemoriesQuery>>[number];
 	type DreamRow = Awaited<ReturnType<typeof listDreamCyclesQuery>>[number];

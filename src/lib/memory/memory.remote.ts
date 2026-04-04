@@ -12,7 +12,7 @@ import {
 	searchMemories,
 	unpinMemoryRecord,
 	updateMemoryRecord,
-} from '$lib/server/memory/store'
+} from '$lib/memory/store'
 
 const createMemorySchema = z.object({
 	content: z.string().trim().min(1),

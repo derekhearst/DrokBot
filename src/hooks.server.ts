@@ -1,5 +1,5 @@
 import { redirect, type Handle } from '@sveltejs/kit'
-import { isAuthenticated } from '$lib/server/auth'
+import { isAuthenticated } from '$lib/auth/auth'
 
 const PUBLIC_PATH_PREFIXES = ['/login', '/demo']
 

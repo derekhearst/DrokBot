@@ -1,14 +1,14 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
-import { and, asc, eq, gt } from 'drizzle-orm'
-import { db } from '$lib/server/db'
-import { conversations, messages } from '$lib/server/db/schema'
-import { streamChat, type LlmMessage } from '$lib/server/llm/openrouter'
-import { routeModel } from '$lib/server/llm/router'
-import { extractAndPersist } from '$lib/server/memory/extract'
-import { assembleContext } from '$lib/server/memory/context'
-import { bumpAccessCount } from '$lib/server/memory/store'
-import { generateTitle } from '$lib/server/chat/titlegen'
-import { emitActivity } from '$lib/server/activity/emit'
+import { and, asc, desc, eq, gt } from 'drizzle-orm'
+import { db } from '$lib/db.server'
+import { conversations, messages } from '$lib/chat/chat.schema'
+import { streamChat, type LlmMessage } from '$lib/llm/openrouter'
+import { routeModel } from '$lib/llm/router'
+import { extractAndPersist } from '$lib/memory/extract'
+import { assembleContext } from '$lib/memory/context'
+import { bumpAccessCount } from '$lib/memory/store'
+import { generateTitle } from '$lib/chat/titlegen'
+import { emitActivity } from '$lib/activity/emit'
 
 const encoder = new TextEncoder()
 
@@ -68,7 +68,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			.select()
 			.from(messages)
 			.where(and(eq(messages.conversationId, body.conversationId), eq(messages.role, 'user')))
-			.orderBy(messages.createdAt)
+			.orderBy(desc(messages.createdAt))
 			.limit(1)
 		parentMessageId = lastUser?.id ?? null
 	}
@@ -79,7 +79,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		.where(eq(messages.conversationId, body.conversationId))
 		.orderBy(asc(messages.createdAt))
 
-	const isFirstExchange = historyRows.length === 0 && !body.regenerate
+	// First exchange = only the message we just inserted exists (historyRows has exactly 1 row)
+	const isFirstExchange = historyRows.length === 1 && !body.regenerate
 
 	if (isFirstExchange) {
 		void emitActivity('chat_started', `Chat started: ${conversation.title}`, {

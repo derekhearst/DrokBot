@@ -1,8 +1,8 @@
 import { command, query } from '$app/server'
 import { and, asc, desc, eq, gt } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { conversations, messages } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { conversations, messages } from '$lib/chat/chat.schema'
 
 const updateConversationMetaSchema = z.object({
 	id: z.string().uuid(),

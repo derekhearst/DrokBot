@@ -1,9 +1,9 @@
 import { command, query } from '$app/server'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { agentTasks } from '$lib/server/db/schema'
-import { discardBranch, getDiff, getFileChanges, mergeBranch } from '$lib/server/tools/git'
+import { db } from '$lib/db.server'
+import { agentTasks } from '$lib/agents/agents.schema'
+import { discardBranch, getDiff, getFileChanges, mergeBranch } from '$lib/tools/git'
 
 const taskIdSchema = z.string().uuid()
 

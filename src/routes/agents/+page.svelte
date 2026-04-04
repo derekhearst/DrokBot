@@ -9,7 +9,7 @@
 		runSchedulerTickCommand,
 		schedulerSnapshot,
 		updateAgentStatus
-	} from '$lib/agents/agents.remote';
+	} from '$lib/agents';
 
 	type AgentRow = Awaited<ReturnType<typeof listAgents>>[number];
 	type Snapshot = Awaited<ReturnType<typeof schedulerSnapshot>>;

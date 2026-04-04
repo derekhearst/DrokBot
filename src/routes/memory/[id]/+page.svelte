@@ -11,7 +11,7 @@
 		pinMemoryCommand,
 		unpinMemoryCommand,
 		updateMemoryCommand
-	} from '$lib/memory/memory.remote';
+	} from '$lib/memory';
 
 	const memoryId = $derived(page.params.id ?? '');
 

@@ -1,8 +1,8 @@
 import { query } from '$app/server'
 import { desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { activityEvents } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { activityEvents } from '$lib/activity/activity.schema'
 
 const listActivitySchema = z.object({
 	type: z

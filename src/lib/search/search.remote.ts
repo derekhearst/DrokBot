@@ -1,6 +1,6 @@
 import { query } from '$app/server'
 import { z } from 'zod'
-import { webSearch } from '$lib/server/tools/search'
+import { webSearch } from '$lib/tools/search'
 
 const searchSchema = z.object({
 	query: z.string().trim().min(1),

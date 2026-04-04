@@ -1,6 +1,6 @@
 import { command, query } from '$app/server'
 import { z } from 'zod'
-import { execShell, getSandboxStatus as fetchSandboxStatus, readFile } from '$lib/server/tools/sandbox'
+import { execShell, getSandboxStatus as fetchSandboxStatus, readFile } from '$lib/tools/sandbox'
 
 const execSchema = z.object({
 	command: z.string().trim().min(1),

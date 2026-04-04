@@ -2,8 +2,8 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { getAgentChoices, runSchedulerTickCommand } from '$lib/agents/agents.remote';
-	import { listTasks, setTaskPriority, setTaskStatus } from '$lib/tasks/tasks.remote';
+	import { getAgentChoices, runSchedulerTickCommand } from '$lib/agents';
+	import { listTasks, setTaskPriority, setTaskStatus } from '$lib/tasks';
 
 	type TaskRow = Awaited<ReturnType<typeof listTasks>>[number];
 	type AgentChoice = Awaited<ReturnType<typeof getAgentChoices>>[number];

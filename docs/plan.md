@@ -96,7 +96,7 @@ Create:
 - `src/routes/login/data.remote.ts`
   - `form()` login action
 - `src/routes/login/+page.svelte`
-- `src/lib/server/auth.remote.ts`
+- `src/lib/auth/auth.remote.ts`
   - `getSession` query
   - `logout` command
 
@@ -421,7 +421,7 @@ Create:
 - `src/lib/settings/settings.remote.ts`
 - `src/lib/dashboard/dashboard.remote.ts`
 - `src/routes/login/data.remote.ts`
-- `src/lib/server/auth.remote.ts`
+- `src/lib/auth/auth.remote.ts`
 
 ## Verification Checklist
 

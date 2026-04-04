@@ -9,7 +9,7 @@ import {
 	removePushSubscription,
 	sendPushToAll,
 	upsertPushSubscription,
-} from '$lib/server/notifications/push'
+} from '$lib/notifications/push'
 
 const pushSubscriptionSchema = z.object({
 	endpoint: z.string().url(),

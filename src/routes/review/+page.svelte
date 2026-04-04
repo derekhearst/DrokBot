@@ -2,8 +2,8 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { listTasks, setTaskStatus, requestChanges } from '$lib/tasks/tasks.remote';
-	import { approveChanges } from '$lib/tasks/review.remote';
+	import { listTasks, setTaskStatus, requestChanges } from '$lib/tasks';
+	import { approveChanges } from '$lib/tasks';
 
 	type TaskRow = Awaited<ReturnType<typeof listTasks>>[number];
 

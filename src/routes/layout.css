@@ -10,18 +10,18 @@
 	--color-base-200: oklch(95% 0.035 92);
 	--color-base-300: oklch(90% 0.03 90);
 	--color-base-content: oklch(28% 0.03 260);
-	--color-primary: oklch(62% 0.22 24);
-	--color-primary-content: oklch(98% 0.01 95);
-	--color-secondary: oklch(66% 0.19 182);
-	--color-secondary-content: oklch(98% 0.02 180);
-	--color-accent: oklch(70% 0.16 316);
-	--color-accent-content: oklch(16% 0.03 316);
+	--color-primary: oklch(74% 0.24 133);
+	--color-primary-content: oklch(20% 0.05 133);
+	--color-secondary: oklch(78% 0.18 142);
+	--color-secondary-content: oklch(20% 0.04 142);
+	--color-accent: oklch(70% 0.2 155);
+	--color-accent-content: oklch(16% 0.04 155);
 	--color-neutral: oklch(32% 0.03 260);
 	--color-neutral-content: oklch(95% 0.01 80);
 	--color-info: oklch(71% 0.16 238);
-	--color-success: oklch(73% 0.19 154);
+	--color-success: oklch(74% 0.22 136);
 	--color-warning: oklch(79% 0.17 84);
-	--color-error: oklch(66% 0.23 28);
+	--color-error: oklch(62% 0.2 24);
 	--radius-selector: 0.9rem;
 	--radius-field: 0.75rem;
 	--radius-box: 1.1rem;
@@ -37,22 +37,22 @@
 	default: false;
 	prefersdark: true;
 	color-scheme: dark;
-	--color-base-100: oklch(20% 0.02 258);
-	--color-base-200: oklch(24% 0.03 258);
-	--color-base-300: oklch(30% 0.03 260);
-	--color-base-content: oklch(92% 0.02 90);
-	--color-primary: oklch(70% 0.2 24);
-	--color-primary-content: oklch(22% 0.03 250);
-	--color-secondary: oklch(71% 0.17 182);
-	--color-secondary-content: oklch(20% 0.03 182);
-	--color-accent: oklch(74% 0.14 316);
-	--color-accent-content: oklch(22% 0.03 316);
+	--color-base-100: oklch(18% 0.02 250);
+	--color-base-200: oklch(22% 0.03 250);
+	--color-base-300: oklch(28% 0.03 250);
+	--color-base-content: oklch(93% 0.02 120);
+	--color-primary: oklch(76% 0.24 135);
+	--color-primary-content: oklch(19% 0.04 135);
+	--color-secondary: oklch(70% 0.2 150);
+	--color-secondary-content: oklch(18% 0.04 150);
+	--color-accent: oklch(68% 0.21 165);
+	--color-accent-content: oklch(18% 0.04 165);
 	--color-neutral: oklch(30% 0.02 260);
 	--color-neutral-content: oklch(92% 0.02 90);
 	--color-info: oklch(73% 0.15 238);
-	--color-success: oklch(74% 0.17 154);
+	--color-success: oklch(74% 0.2 140);
 	--color-warning: oklch(81% 0.14 84);
-	--color-error: oklch(71% 0.2 28);
+	--color-error: oklch(68% 0.21 24);
 	--radius-selector: 0.9rem;
 	--radius-field: 0.75rem;
 	--radius-box: 1.1rem;
@@ -64,10 +64,18 @@
 }
 
 :root {
+	--cursor-x: 50vw;
+	--cursor-y: 50vh;
+	--cursor-energy: 0;
 	background:
-		radial-gradient(circle at 12% -10%, color-mix(in oklab, var(--color-secondary) 24%, transparent), transparent 36%),
-		radial-gradient(circle at 82% 120%, color-mix(in oklab, var(--color-primary) 20%, transparent), transparent 44%),
-		linear-gradient(180deg, var(--color-base-200), var(--color-base-200));
+		radial-gradient(circle at 10% 8%, color-mix(in oklab, var(--color-primary) 20%, transparent), transparent 42%),
+		radial-gradient(circle at 86% 12%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent 46%),
+		linear-gradient(145deg, var(--color-base-200), var(--color-base-100));
+	background-size:
+		130% 130%,
+		140% 140%,
+		100% 100%;
+	animation: ambient-shift 24s ease-in-out infinite alternate;
 	min-height: 100%;
 }
 
@@ -79,6 +87,34 @@ body {
 	animation: shell-fade 280ms ease-out;
 }
 
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 0;
+	background:
+		radial-gradient(
+			circle 190px at var(--cursor-x) var(--cursor-y),
+			color-mix(in oklab, var(--color-primary) 44%, transparent) 0%,
+			transparent 75%
+		),
+		conic-gradient(
+			from 140deg at var(--cursor-x) var(--cursor-y),
+			transparent 0deg,
+			color-mix(in oklab, var(--color-primary) 26%, transparent) 16deg,
+			transparent 46deg,
+			color-mix(in oklab, var(--color-secondary) 20%, transparent) 64deg,
+			transparent 360deg
+		);
+	filter: blur(24px) saturate(118%);
+	opacity: calc(var(--cursor-energy) * 0.65);
+	transition:
+		opacity 220ms ease,
+		filter 280ms ease;
+	animation: cursor-flicker 3.2s steps(2, jump-none) infinite;
+}
+
 @keyframes shell-fade {
 	from {
 		opacity: 0;
@@ -87,5 +123,47 @@ body {
 	to {
 		opacity: 1;
 		transform: translateY(0);
+	}
+}
+
+@keyframes ambient-shift {
+	0% {
+		background-position:
+			0% 0%,
+			100% 0%,
+			0% 0%;
+	}
+	50% {
+		background-position:
+			20% 16%,
+			84% 18%,
+			0% 0%;
+	}
+	100% {
+		background-position:
+			10% 8%,
+			90% 10%,
+			0% 0%;
+	}
+}
+
+@keyframes cursor-flicker {
+	0%,
+	100% {
+		filter: blur(24px) saturate(118%);
+	}
+	50% {
+		filter: blur(28px) saturate(132%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		animation: none;
+	}
+
+	body::before {
+		animation: none;
+		transition: opacity 120ms linear;
 	}
 }

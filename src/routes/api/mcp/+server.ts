@@ -1,9 +1,11 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
 import { env } from '$env/dynamic/private'
-import { executeTool, toolSchemas, type ToolName } from '$lib/server/llm/tools'
-import { searchMemories } from '$lib/server/memory/store'
-import { db } from '$lib/server/db'
-import { agents, agentTasks, conversations, memories } from '$lib/server/db/schema'
+import { executeTool, toolSchemas, type ToolName } from '$lib/llm/tools'
+import { searchMemories } from '$lib/memory/store'
+import { db } from '$lib/db.server'
+import { agents, agentTasks } from '$lib/agents/agents.schema'
+import { conversations } from '$lib/chat/chat.schema'
+import { memories } from '$lib/memory/memory.schema'
 import { desc, eq } from 'drizzle-orm'
 
 const MCP_API_KEY = env.MCP_API_KEY

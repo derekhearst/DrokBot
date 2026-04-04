@@ -3,9 +3,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { getAgentChoices, runTaskNow } from '$lib/agents/agents.remote';
-	import { getTask, reassignTask, setTaskStatus, requestChanges, getTaskComments, getTaskMessages, addTaskMessage } from '$lib/tasks/tasks.remote';
-	import { approveChanges, getChangedFiles, getTaskDiff, rejectChanges, requestRevision } from '$lib/tasks/review.remote';
+	import { getAgentChoices, runTaskNow } from '$lib/agents';
+	import { getTask, reassignTask, setTaskStatus, requestChanges, getTaskComments, getTaskMessages, addTaskMessage } from '$lib/tasks';
+	import { approveChanges, getChangedFiles, getTaskDiff, rejectChanges, requestRevision } from '$lib/tasks';
 
 	const taskId = $derived(page.params.id ?? '');
 

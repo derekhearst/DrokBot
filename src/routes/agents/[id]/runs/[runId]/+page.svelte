@@ -3,7 +3,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
-	import { getAgentRun } from '$lib/agents/runs.remote';
+	import { getAgentRun } from '$lib/agents';
 
 	const agentId = $derived(page.params.id ?? '');
 	const runId = $derived(page.params.runId ?? '');

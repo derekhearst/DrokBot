@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getConversations } from '$lib/chat/chat.remote';
+	import { getConversations } from '$lib/chat';
 
 	type Conversation = Awaited<ReturnType<typeof getConversations>>[number];
 

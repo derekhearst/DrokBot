@@ -2,7 +2,7 @@
 
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createAgent } from '$lib/agents/agents.remote';
+	import { createAgent } from '$lib/agents';
 	import ModelSelector from '$lib/components/ui/ModelSelector.svelte';
 
 	let name = $state('');

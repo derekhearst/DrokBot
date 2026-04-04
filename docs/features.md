@@ -20,7 +20,9 @@ DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you ca
 - **Regeneration** — re-run any assistant response with the same or different model
 - **Jump-back-in-time** — click any point in the conversation timeline to fork from there
 - **Context window indicator** — VS Code-style token usage bar with breakdown by category (system prompt, memories, tool definitions, chat messages, tool results) and a "Compact Context" button for auto-summarization
-- **Model picker** — select model per conversation, overridable per message
+- **Model picker** — reusable modal model browser with searchable grid (name, id, context, pricing, metadata); available inline in the main `/chat` composer and per-conversation chat input
+- **Composer controls** — main `/chat` input includes Add files, model picker, mic button, and a Gemini-style send button that switches to a stop button while streaming
+- **Streaming UX polish** — assistant "thinking" indicator renders in the message lane before first token arrives; streamed draft remains visible until persisted message hydration completes
 - **Tool call visibility** — collapsible cards for each tool invocation showing input, output, and execution time; special inline rendering for web search results
 
 ### 2. Autonomous Agents
@@ -111,6 +113,7 @@ Four interconnected pillars based on the sleep-time compute concept:
 ### Data Flow Pattern
 
 - **Remote functions** (`query`/`command`/`form`) for ALL data operations — no `+page.server.ts` files
+- **Domain-first remote layout**: browser-consumed remotes live under `src/lib/{domain}` (for example `src/lib/chat/chat.remote.ts`), and server-only runtime modules are colocated in those same domain folders under `src/lib/**`
 - **SSE streaming** only for chat message streaming (`/chat/[id]/stream/+server.ts`)
 - `experimental.remoteFunctions: true` and `experimental.async: true` in svelte.config.js
 - `getRequestEvent()` inside remote functions for cookie/auth access

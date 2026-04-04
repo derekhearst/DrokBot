@@ -1,7 +1,7 @@
 import { command } from '$app/server'
 import { query } from '$app/server'
 import { z } from 'zod'
-import { listDreamCycles, runDreamCycle } from '$lib/server/memory/dream'
+import { listDreamCycles, runDreamCycle } from '$lib/memory/dream'
 
 const runDreamCycleSchema = z.object({
 	decayLambda: z.number().positive().max(1).optional(),

@@ -1,7 +1,7 @@
 import { invalid } from '@sveltejs/kit'
 import { form, getRequestEvent } from '$app/server'
 import { z } from 'zod'
-import { isValidPassword, setSessionCookie } from '$lib/server/auth'
+import { isValidPassword, setSessionCookie } from '$lib/auth/auth'
 
 const loginSchema = z.object({
 	password: z.string().min(1),

@@ -1,7 +1,10 @@
 import { query } from '$app/server'
 import { desc, eq, sql } from 'drizzle-orm'
-import { db } from '$lib/server/db'
-import { agentTasks, agents, conversations, memories, messages, notifications } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { conversations, messages } from '$lib/chat/chat.schema'
+import { memories } from '$lib/memory/memory.schema'
+import { agentTasks, agents } from '$lib/agents/agents.schema'
+import { notifications } from '$lib/notifications/notifications.schema'
 
 async function getCount(tableName: string) {
 	const [row] = await db.execute<{ count: string }>(sql.raw(`select count(*)::text as count from ${tableName}`))

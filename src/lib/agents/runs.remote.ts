@@ -1,8 +1,8 @@
 import { query } from '$app/server'
 import { and, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { agentRuns, agents, agentTasks } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { agentRuns, agents, agentTasks } from '$lib/agents/agents.schema'
 
 const agentIdSchema = z.string().uuid()
 const runIdSchema = z.string().uuid()

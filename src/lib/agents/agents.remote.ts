@@ -1,17 +1,16 @@
 import { command, query } from '$app/server'
 import { asc, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { agents } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { agents, agentTasks } from '$lib/agents/agents.schema'
 import {
 	createAgentTask,
 	delegateTaskToAgent,
 	executeAgentTask,
 	getAgentDashboard,
 	listAgentsWithCounts,
-} from '$lib/server/agents/engine'
-import { getSchedulerSnapshot, runSchedulerTick, runSchedulerUntilIdle } from '$lib/server/agents/scheduler'
-import { agentTasks } from '$lib/server/db/schema'
+} from '$lib/agents/engine'
+import { getSchedulerSnapshot, runSchedulerTick, runSchedulerUntilIdle } from '$lib/agents/scheduler'
 
 const agentIdSchema = z.string().uuid()
 

@@ -28,10 +28,16 @@
 
 	let editing = $state(false);
 	let draft = $state('');
-	let expanded = $state(false);
 
 	const isUser = $derived(message.role === 'user');
 	const isAssistant = $derived(message.role === 'assistant');
+	const estimatedTokensOut = $derived(
+		message.tokensOut > 0 ? message.tokensOut : Math.max(1, Math.ceil((message.content?.length ?? 0) / 4))
+	);
+	const estimatedTokensIn = $derived(
+		message.tokensIn > 0 ? message.tokensIn : Math.max(1, Math.ceil((message.content?.length ?? 0) / 4))
+	);
+	const formattedCost = $derived(Number.parseFloat(message.cost || '0').toFixed(4));
 
 	async function submitEdit() {
 		if (!draft.trim()) return;
@@ -45,13 +51,8 @@
 	}
 </script>
 
-<article class={`chat ${isUser ? 'chat-end' : 'chat-start'}`}>
-	<div class="chat-header text-xs opacity-70">
-		{message.role}
-		<span class="ml-1">{new Date(message.createdAt).toLocaleTimeString()}</span>
-	</div>
-
-	<div class={`chat-bubble max-w-3xl ${isUser ? 'chat-bubble-primary' : 'chat-bubble-neutral'}`}>
+<article class={`chat w-full ${isUser ? 'chat-end' : 'chat-start'}`}>
+	<div class={`chat-bubble ${isUser ? 'chat-bubble-primary max-w-[90%]' : 'chat-bubble-neutral max-w-full w-full'}`}>
 		{#if editing}
 			<textarea class="textarea textarea-bordered w-full" bind:value={draft}></textarea>
 			<div class="mt-2 flex gap-2">
@@ -64,36 +65,55 @@
 	</div>
 
 	{#if !editing}
-		<div class="mt-1 flex items-center gap-2 text-xs">
+		<div class={`mt-1 flex w-full items-center gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
 			{#if isUser}
-				<button class="btn btn-xs btn-ghost" type="button" onclick={startEditing}>Edit</button>
-			{/if}
-			{#if isAssistant}
-				<button class="btn btn-xs btn-ghost" type="button" onclick={() => onRegenerate?.(message.id)}>
-					Regenerate
+				<button class="btn btn-ghost btn-xs btn-circle" type="button" onclick={startEditing} title="Edit message" aria-label="Edit message">
+					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 20h9"></path>
+						<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+					</svg>
 				</button>
 			{/if}
-			<button class="btn btn-xs btn-ghost" type="button" onclick={() => (expanded = !expanded)}>
-				{expanded ? 'Hide stats' : 'Show stats'}
-			</button>
-		</div>
-	{/if}
-
-	{#if expanded}
-		<div class="mt-1 rounded-xl border border-base-300 bg-base-100 px-3 py-2 text-xs">
-			<div class="grid gap-1 sm:grid-cols-3">
-				<span>Model: {message.model ?? 'n/a'}</span>
-				<span>Tokens: {message.tokensIn}/{message.tokensOut}</span>
-				<span>Cost: ${message.cost}</span>
-				<span>TTFT: {message.ttftMs ?? '-'}ms</span>
-				<span>Total: {message.totalMs ?? '-'}ms</span>
-				<span>Tok/s: {message.tokensPerSec ?? '-'}</span>
+			{#if isAssistant}
+				<button class="btn btn-ghost btn-xs btn-circle" type="button" onclick={() => onRegenerate?.(message.id)} title="Regenerate response" aria-label="Regenerate response">
+					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M23 4v6h-6"></path>
+						<path d="M20.5 15a9 9 0 1 1 2.1-9"></path>
+					</svg>
+				</button>
+			{/if}
+			<div class="dropdown dropdown-top">
+				<button class="btn btn-ghost btn-xs btn-circle" type="button" title="Message stats" aria-label="Message stats">
+					<svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<circle cx="12" cy="12" r="10"></circle>
+						<path d="M12 16v-4"></path>
+						<path d="M12 8h.01"></path>
+					</svg>
+				</button>
+				<div class="dropdown-content z-20 mt-2 w-72 rounded-xl border border-base-300 bg-base-100 p-3 text-xs shadow-xl">
+					<div class="grid grid-cols-2 gap-x-3 gap-y-2">
+						<span class="opacity-70">Model</span>
+						<span class="truncate text-right">{message.model ?? 'n/a'}</span>
+						<span class="opacity-70">Tokens In</span>
+						<span class="text-right">{estimatedTokensIn}</span>
+						<span class="opacity-70">Tokens Out</span>
+						<span class="text-right">{estimatedTokensOut}</span>
+						<span class="opacity-70">Cost</span>
+						<span class="text-right">${formattedCost}</span>
+						<span class="opacity-70">TTFT</span>
+						<span class="text-right">{message.ttftMs ?? 'n/a'}{message.ttftMs !== null ? 'ms' : ''}</span>
+						<span class="opacity-70">Total</span>
+						<span class="text-right">{message.totalMs ?? 'n/a'}{message.totalMs !== null ? 'ms' : ''}</span>
+						<span class="opacity-70">Tok/s</span>
+						<span class="text-right">{message.tokensPerSec ?? 'n/a'}</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
 
 	{#if message.toolCalls && message.toolCalls.length > 0}
-		<div class="mt-2 space-y-2">
+		<div class="mt-2 w-full space-y-2">
 			{#each message.toolCalls as call, idx (`${message.id}-${idx}`)}
 				<ToolCallCard
 					name={String(call.name ?? 'tool')}

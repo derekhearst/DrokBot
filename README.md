@@ -18,7 +18,7 @@ The memory system stores, retrieves, and consolidates facts over time using Post
 
 ### Dashboard and Settings
 
-The home dashboard now shows live system totals, task status distribution, and recent activity across conversations and tasks. Settings persist default model, theme, notification preferences, and dream-cycle behavior in the database.
+The dashboard is available at a dedicated route and shows live system totals, task status distribution, and recent activity across conversations and tasks. Settings persist default model, theme, notification preferences, and dream-cycle behavior in the database.
 
 ## Tech Stack
 
@@ -84,12 +84,20 @@ Notes:
 - High-level contract: `docs/features.md`
 - Full implementation plan: `docs/plan.md`
 
+## Architecture Conventions
+
+- Domain-first API boundaries: browser-consumed remote functions live in `src/lib/{domain}`.
+- Server-only internals are colocated in domain folders under `src/lib/**` and are only imported by remote functions or `+server` routes.
+- Route and component imports should prefer domain barrels (for example, `$lib/chat`, `$lib/agents`) over deep `*.remote` paths.
+
 ## Route Map
 
-- `/` Dashboard
+- `/` Redirects to chat
 - `/login` Authentication
 - `/chat` Conversations
 - `/chat/[id]` Chat detail
+- `/dashboard` System dashboard
+- `/cost` Cost dashboard
 - `/agents` Agent management
 - `/tasks` Task board
 - `/memory` Memory explorer

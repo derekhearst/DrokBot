@@ -1,8 +1,9 @@
 import { query } from '$app/server'
 import { and, desc, eq, gte, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { db } from '$lib/server/db'
-import { agentRuns, conversations, messages } from '$lib/server/db/schema'
+import { db } from '$lib/db.server'
+import { conversations, messages } from '$lib/chat/chat.schema'
+import { agentRuns } from '$lib/agents/agents.schema'
 
 const costPeriodSchema = z.object({
 	period: z.enum(['day', 'week', 'month']).optional(),

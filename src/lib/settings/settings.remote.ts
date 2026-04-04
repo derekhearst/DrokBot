@@ -1,6 +1,6 @@
 import { command, query } from '$app/server'
 import { z } from 'zod'
-import { getOrCreateSettings, resetSettings, updateSettings } from '$lib/server/settings/settings'
+import { getOrCreateSettings, resetSettings, updateSettings } from '$lib/settings/settings'
 
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),

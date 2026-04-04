@@ -2,7 +2,7 @@
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { listActivity } from '$lib/activity/activity.remote';
+	import { listActivity } from '$lib/activity';
 
 	type ActivityRow = Awaited<ReturnType<typeof listActivity>>[number];
 	type EventType = ActivityRow['type'];

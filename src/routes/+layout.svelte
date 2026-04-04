@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
+	import { browser, dev } from '$app/environment';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import Sidebar from '$lib/components/ui/Sidebar.svelte';
-	import ThemeToggle from '$lib/components/ui/ThemeToggle.svelte';
 	import RecentChats from '$lib/components/ui/RecentChats.svelte';
 
 	let { children } = $props();
@@ -19,10 +18,67 @@
 	}
 
 	onMount(() => {
-		if (!browser || !('serviceWorker' in navigator)) return;
-		void navigator.serviceWorker.register('/service-worker.js').catch(() => {
-			// Ignore registration failures in unsupported contexts.
-		});
+		if (!browser) return;
+
+		const root = document.documentElement;
+		let rafId = 0;
+		let pulseTimer: ReturnType<typeof setTimeout> | null = null;
+
+		const queuePointerUpdate = (x: number, y: number) => {
+			if (rafId) cancelAnimationFrame(rafId);
+			rafId = requestAnimationFrame(() => {
+				root.style.setProperty('--cursor-x', `${x}px`);
+				root.style.setProperty('--cursor-y', `${y}px`);
+				root.style.setProperty('--cursor-energy', '1');
+
+				if (pulseTimer) clearTimeout(pulseTimer);
+				pulseTimer = setTimeout(() => {
+					root.style.setProperty('--cursor-energy', '0.35');
+				}, 220);
+			});
+		};
+
+		const handlePointerMove = (event: PointerEvent) => {
+			queuePointerUpdate(event.clientX, event.clientY);
+		};
+
+		const handlePointerLeave = () => {
+			root.style.setProperty('--cursor-energy', '0');
+		};
+
+		window.addEventListener('pointermove', handlePointerMove, { passive: true });
+		window.addEventListener('pointerleave', handlePointerLeave);
+
+		if (dev && 'serviceWorker' in navigator) {
+			void navigator.serviceWorker
+				.getRegistrations()
+				.then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+				.catch(() => {
+					// Ignore cleanup failures in dev.
+				});
+
+			if ('caches' in window) {
+				void caches
+					.keys()
+					.then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+					.catch(() => {
+						// Ignore cache cleanup failures in dev.
+					});
+			}
+		}
+
+		if (!dev && 'serviceWorker' in navigator) {
+			void navigator.serviceWorker.register('/service-worker.js').catch(() => {
+				// Ignore registration failures in unsupported contexts.
+			});
+		}
+
+		return () => {
+			window.removeEventListener('pointermove', handlePointerMove);
+			window.removeEventListener('pointerleave', handlePointerLeave);
+			if (rafId) cancelAnimationFrame(rafId);
+			if (pulseTimer) clearTimeout(pulseTimer);
+		};
 	});
 </script>
 
@@ -34,28 +90,9 @@
 	<div class="drawer lg:drawer-open">
 		<input id="app-drawer" type="checkbox" class="drawer-toggle" bind:checked={mobileSidebarOpen} />
 
-		<div class="drawer-content flex h-screen flex-col overflow-hidden">
-			<header class="shrink-0 border-b border-base-300 bg-base-100/85 backdrop-blur-md">
-				<div class="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 sm:px-6">
-					<div class="flex items-center gap-3">
-						<label for="app-drawer" class="btn btn-ghost btn-square lg:hidden" aria-label="Open menu">
-							<span aria-hidden="true">Menu</span>
-						</label>
-						<div>
-							<p class="text-sm uppercase tracking-[0.14em] text-base-content/55">DrokBot Control</p>
-							<h1 class="text-lg font-semibold">Autonomous Workspace</h1>
-						</div>
-					</div>
-
-					<div class="flex items-center gap-2">
-						<ThemeToggle />
-						<a href="/settings" class="btn btn-sm btn-outline">Settings</a>
-					</div>
-				</div>
-			</header>
-
-			<div class="mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-rows-[1fr] gap-4 p-4 sm:p-6 {isChatRoute ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
-				<main class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-base-300 bg-base-100/85 p-4 shadow-sm sm:p-6">
+		<div class="drawer-content relative flex h-screen flex-col overflow-hidden">
+			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-4 p-4 sm:p-6 {isChatRoute ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
+				<main class="flex min-h-0 flex-col overflow-y-auto rounded-3xl border border-base-300 bg-base-100/85 p-4 shadow-sm sm:p-6">
 					{@render children()}
 				</main>
 
