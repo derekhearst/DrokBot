@@ -39,10 +39,12 @@
 	background:
 		radial-gradient(circle at 10% 8%, color-mix(in oklab, var(--color-primary) 20%, transparent), transparent 42%),
 		radial-gradient(circle at 86% 12%, color-mix(in oklab, var(--color-accent) 18%, transparent), transparent 46%),
+		radial-gradient(circle at 56% 86%, color-mix(in oklab, var(--color-secondary) 10%, transparent), transparent 40%),
 		linear-gradient(145deg, var(--color-base-200), var(--color-base-100));
 	background-size:
 		130% 130%,
 		140% 140%,
+		110% 110%,
 		100% 100%;
 	animation: ambient-shift 24s ease-in-out infinite alternate;
 	min-height: 100%;
@@ -64,24 +66,32 @@ body::before {
 	z-index: 0;
 	background:
 		radial-gradient(
-			circle 190px at var(--cursor-x) var(--cursor-y),
-			color-mix(in oklab, var(--color-primary) 44%, transparent) 0%,
-			transparent 75%
+			circle 200px at var(--cursor-x) var(--cursor-y),
+			color-mix(in oklab, var(--color-primary) 36%, transparent) 0%,
+			color-mix(in oklab, var(--color-primary) 12%, transparent) 50%,
+			transparent 100%
 		),
-		conic-gradient(
-			from 140deg at var(--cursor-x) var(--cursor-y),
-			transparent 0deg,
-			color-mix(in oklab, var(--color-primary) 26%, transparent) 16deg,
-			transparent 46deg,
-			color-mix(in oklab, var(--color-secondary) 20%, transparent) 64deg,
-			transparent 360deg
+		radial-gradient(
+			circle 480px at var(--cursor-x) var(--cursor-y),
+			color-mix(in oklab, var(--color-secondary) 10%, transparent) 0%,
+			color-mix(in oklab, var(--color-accent) 4%, transparent) 50%,
+			transparent 100%
 		);
-	filter: blur(24px) saturate(118%);
-	opacity: calc(var(--cursor-energy) * 0.65);
-	transition:
-		opacity 220ms ease,
-		filter 280ms ease;
-	animation: cursor-flicker 3.2s steps(2, jump-none) infinite;
+	filter: blur(40px) saturate(120%);
+	opacity: calc(var(--cursor-energy) * 0.7);
+	transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 1;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+	background-size: 200px 200px;
+	opacity: 0.025;
+	mix-blend-mode: overlay;
 }
 
 .chat-composer-transition {
@@ -113,29 +123,22 @@ body::before {
 		background-position:
 			0% 0%,
 			100% 0%,
+			60% 90%,
 			0% 0%;
 	}
 	50% {
 		background-position:
 			20% 16%,
 			84% 18%,
+			46% 82%,
 			0% 0%;
 	}
 	100% {
 		background-position:
 			10% 8%,
 			90% 10%,
+			55% 88%,
 			0% 0%;
-	}
-}
-
-@keyframes cursor-flicker {
-	0%,
-	100% {
-		filter: blur(24px) saturate(118%);
-	}
-	50% {
-		filter: blur(28px) saturate(132%);
 	}
 }
 
@@ -145,7 +148,10 @@ body::before {
 	}
 
 	body::before {
-		animation: none;
 		transition: opacity 120ms linear;
+	}
+
+	body::after {
+		opacity: 0;
 	}
 }
