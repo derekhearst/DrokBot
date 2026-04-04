@@ -8,6 +8,8 @@
 		class?: string
 		size?: 'xs' | 'sm' | 'default'
 		variant?: 'default' | 'inline'
+		showChevron?: boolean
+		showBrowseBadge?: boolean
 	}
 
 	let {
@@ -16,6 +18,8 @@
 		class: className = '',
 		size = 'default',
 		variant = 'default',
+		showChevron = true,
+		showBrowseBadge = true,
 	}: Props = $props()
 
 	let models = $derived(await getAvailableModels())
@@ -119,8 +123,10 @@
 		}}
 	>
 		<span class="truncate">{selectedLabel}</span>
-		<span class="opacity-70">▾</span>
-		{#if !isInline}
+		{#if showChevron}
+			<span class="opacity-70">▾</span>
+		{/if}
+		{#if !isInline && showBrowseBadge}
 			<span class="badge badge-ghost badge-xs">Browse</span>
 		{/if}
 	</button>

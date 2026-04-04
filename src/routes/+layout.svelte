@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser, dev } from '$app/environment';
+	import { onNavigate } from '$app/navigation';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
@@ -12,6 +13,47 @@
 
 	const isLoginRoute = $derived(page.url.pathname.startsWith('/login'));
 	const isChatRoute = $derived(page.url.pathname.startsWith('/chat'));
+	const showRecentChats = $derived(isChatRoute || page.url.pathname === '/');
+
+	if (browser) {
+		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const supportsViewTransitions =
+			!reducedMotion &&
+			'startViewTransition' in document &&
+			typeof (
+				document as Document & {
+					startViewTransition?: (callback: () => Promise<void> | void) => { finished: Promise<void> };
+				}
+			).startViewTransition === 'function';
+
+		onNavigate((navigation) => {
+			if (!supportsViewTransitions) return;
+
+			const fromPath = navigation.from?.url.pathname ?? '';
+			const toPath = navigation.to?.url.pathname ?? '';
+			const chatDetailRoute = /^\/chat\/[^/]+$/;
+			const morphComposer =
+				(fromPath === '/' && chatDetailRoute.test(toPath)) ||
+				(chatDetailRoute.test(fromPath) && toPath === '/');
+
+			if (!morphComposer) return;
+
+			return new Promise<void>((resolve) => {
+				(
+					document as Document & {
+						startViewTransition: (callback: () => Promise<void> | void) => { finished: Promise<void> };
+					}
+				)
+					.startViewTransition(async () => {
+						resolve();
+						await navigation.complete;
+					})
+					.finished.catch(() => {
+						// Ignore transition failures and allow normal navigation.
+					});
+			});
+		});
+	}
 
 	function closeSidebar() {
 		mobileSidebarOpen = false;
@@ -19,6 +61,9 @@
 
 	onMount(() => {
 		if (!browser) return;
+
+		document.documentElement.setAttribute('data-theme', 'drokbot-night');
+		localStorage.setItem('drokbot-theme', 'drokbot-night');
 
 		const root = document.documentElement;
 		let rafId = 0;
@@ -91,12 +136,12 @@
 		<input id="app-drawer" type="checkbox" class="drawer-toggle" bind:checked={mobileSidebarOpen} />
 
 		<div class="drawer-content relative flex h-screen flex-col overflow-hidden">
-			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-4 p-4 sm:p-6 {isChatRoute ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
+			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-4 p-4 sm:p-6 {showRecentChats ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
 				<main class="flex min-h-0 flex-col overflow-y-auto rounded-3xl border border-base-300 bg-base-100/85 p-4 shadow-sm sm:p-6">
 					{@render children()}
 				</main>
 
-				{#if isChatRoute}
+				{#if showRecentChats}
 					<aside class="hidden overflow-y-auto rounded-3xl border border-base-300 bg-base-100/80 p-4 shadow-sm xl:block">
 						<RecentChats />
 					</aside>

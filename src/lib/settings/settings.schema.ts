@@ -29,7 +29,14 @@ export const appSettings = pgTable('app_settings', {
 		}>()
 		.notNull()
 		.default({ dailyLimit: null, monthlyLimit: null }),
-	theme: text('theme').notNull().default('drokbot'),
+	contextConfig: jsonb('context_config')
+		.$type<{
+			reservedResponsePct: number
+			autoCompactThresholdPct: number
+		}>()
+		.notNull()
+		.default({ reservedResponsePct: 30, autoCompactThresholdPct: 72 }),
+	theme: text('theme').notNull().default('drokbot-night'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

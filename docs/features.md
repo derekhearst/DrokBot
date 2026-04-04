@@ -19,9 +19,11 @@ DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you ca
 - **Message editing** — edit any user message to fork the conversation from that point
 - **Regeneration** — re-run any assistant response with the same or different model
 - **Jump-back-in-time** — click any point in the conversation timeline to fork from there
-- **Context window indicator** — VS Code-style token usage bar with breakdown by category (system prompt, memories, tool definitions, chat messages, tool results) and a "Compact Context" button for auto-summarization
+- **Context window indicator** — circular usage meter with dropdown breakdown panel (estimated live context allocation, reserved response room) plus per-model usage distribution graph and a "Compact Conversation" action
+- **Context window controls** — settings include sliders for reserved response band size and auto-compact threshold used during model downsizing
 - **Model picker** — reusable modal model browser with searchable grid (name, id, context, pricing, metadata); available inline in the main `/chat` composer and per-conversation chat input
 - **Composer controls** — main `/chat` input includes Add files, model picker, mic button, and a Gemini-style send button that switches to a stop button while streaming
+- **Composer route morph** — starting a new chat animates the composer from the home view into its in-thread position using a native view-transition size/position morph
 - **Streaming UX polish** — assistant "thinking" indicator renders in the message lane before first token arrives; streamed draft remains visible until persisted message hydration completes
 - **Tool call visibility** — collapsible cards for each tool invocation showing input, output, and execution time; special inline rendering for web search results
 
@@ -90,7 +92,8 @@ Four interconnected pillars based on the sleep-time compute concept:
 - Default model selection
 - Notification preferences
 - Dream cycle configuration (frequency, aggressiveness)
-- Theme (light/dark)
+- Theme (dark-only)
+- Context controls: reserved response percentage and model-switch auto-compact threshold
 
 ---
 

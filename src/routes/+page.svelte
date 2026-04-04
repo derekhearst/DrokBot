@@ -34,13 +34,6 @@
 			busy = false;
 		}
 	}
-
-	const suggestions = [
-		{ label: 'Write code', icon: '✦', prompt: 'Help me write ' },
-		{ label: 'Debug an issue', icon: '⚡', prompt: 'Help me debug ' },
-		{ label: 'Explain a concept', icon: '📖', prompt: 'Explain ' },
-		{ label: 'Brainstorm ideas', icon: '💡', prompt: 'Brainstorm ideas for ' }
-	];
 </script>
 
 <div class="flex flex-1 flex-col items-center justify-center">
@@ -52,36 +45,23 @@
 		</div>
 
 		<!-- Input Area -->
-		<ChatComposer
-			bind:value={prompt}
-			{busy}
-			{model}
-			placeholder="Start a new conversation..."
-			onSubmit={(content) => handleNewChat(content)}
-			onModelChange={(id) => {
-				model = id;
-			}}
-			onAddFiles={() => {
-				// File picker hook will be wired in a later pass.
-			}}
-			onMicClick={() => {
-				// Voice capture hook will be wired in a later pass.
-			}}
-		/>
-
-		<!-- Suggestion Chips -->
-		<div class="flex flex-wrap justify-center gap-2">
-			{#each suggestions as s (s.label)}
-				<button
-					type="button"
-					class="btn btn-sm btn-outline rounded-full"
-					disabled={busy}
-					onclick={() => { prompt = s.prompt; }}
-				>
-					<span>{s.icon}</span>
-					{s.label}
-				</button>
-			{/each}
+		<div class="chat-composer-transition">
+			<ChatComposer
+				bind:value={prompt}
+				{busy}
+				{model}
+				placeholder="Start a new conversation..."
+				onSubmit={(content) => handleNewChat(content)}
+				onModelChange={(id) => {
+					model = id;
+				}}
+				onAddFiles={() => {
+					// File picker hook will be wired in a later pass.
+				}}
+				onMicClick={() => {
+					// Voice capture hook will be wired in a later pass.
+				}}
+			/>
 		</div>
 	</div>
 </div>

@@ -19,7 +19,11 @@ export const DEFAULT_SETTINGS = {
 		dailyLimit: null as number | null,
 		monthlyLimit: null as number | null,
 	},
-	theme: 'drokbot',
+	contextConfig: {
+		reservedResponsePct: 30,
+		autoCompactThresholdPct: 72,
+	},
+	theme: 'drokbot-night',
 } as const
 
 export async function getOrCreateSettings() {
@@ -32,6 +36,7 @@ export async function getOrCreateSettings() {
 			defaultModel: DEFAULT_SETTINGS.defaultModel,
 			notificationPrefs: DEFAULT_SETTINGS.notificationPrefs,
 			dreamConfig: DEFAULT_SETTINGS.dreamConfig,
+			contextConfig: DEFAULT_SETTINGS.contextConfig,
 			theme: DEFAULT_SETTINGS.theme,
 			updatedAt: new Date(),
 		})
@@ -57,13 +62,17 @@ export async function updateSettings(input: {
 		dailyLimit?: number | null
 		monthlyLimit?: number | null
 	}
+	contextConfig?: {
+		reservedResponsePct?: number
+		autoCompactThresholdPct?: number
+	}
 }) {
 	const current = await getOrCreateSettings()
 	const [updated] = await db
 		.update(appSettings)
 		.set({
 			defaultModel: input.defaultModel ?? current.defaultModel,
-			theme: input.theme ?? current.theme,
+			theme: 'drokbot-night',
 			notificationPrefs: {
 				...current.notificationPrefs,
 				...(input.notificationPrefs ?? {}),
@@ -75,6 +84,11 @@ export async function updateSettings(input: {
 			budgetConfig: {
 				...(current.budgetConfig ?? DEFAULT_SETTINGS.budgetConfig),
 				...(input.budgetConfig ?? {}),
+			},
+			contextConfig: {
+				...((current.contextConfig as typeof DEFAULT_SETTINGS.contextConfig | undefined) ??
+					DEFAULT_SETTINGS.contextConfig),
+				...(input.contextConfig ?? {}),
 			},
 			updatedAt: new Date(),
 		})
@@ -98,6 +112,7 @@ export async function resetSettings() {
 			notificationPrefs: DEFAULT_SETTINGS.notificationPrefs,
 			dreamConfig: DEFAULT_SETTINGS.dreamConfig,
 			budgetConfig: DEFAULT_SETTINGS.budgetConfig,
+			contextConfig: DEFAULT_SETTINGS.contextConfig,
 			updatedAt: new Date(),
 		})
 		.where(eq(appSettings.id, existing.id))

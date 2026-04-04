@@ -61,7 +61,7 @@
 		pushEnabled = subs.length > 0;
 	}
 
-	function applyTheme(theme: 'drokbot' | 'drokbot-night') {
+	function applyTheme(theme: 'drokbot-night') {
 		if (!browser) return;
 		document.documentElement.setAttribute('data-theme', theme);
 		localStorage.setItem('drokbot-theme', theme);
@@ -74,13 +74,14 @@
 		try {
 			const updated = await updateAppSettings({
 				defaultModel: settings.defaultModel,
-				theme: settings.theme as 'drokbot' | 'drokbot-night',
+				theme: 'drokbot-night',
 				notificationPrefs: settings.notificationPrefs,
 				dreamConfig: settings.dreamConfig,
 				budgetConfig: settings.budgetConfig,
+				contextConfig: settings.contextConfig,
 			});
 			settings = updated;
-			applyTheme(updated.theme as 'drokbot' | 'drokbot-night');
+			applyTheme('drokbot-night');
 			statusMessage = 'Settings saved.';
 		} finally {
 			busy = false;
@@ -94,7 +95,7 @@
 		try {
 			const updated = await resetAppSettings();
 			settings = updated;
-			applyTheme(updated.theme as 'drokbot' | 'drokbot-night');
+			applyTheme('drokbot-night');
 			statusMessage = 'Settings reset to defaults.';
 		} finally {
 			busy = false;
@@ -219,96 +220,181 @@
 	}
 </script>
 
-<section class="space-y-5">
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<h1 class="text-3xl font-bold">Settings</h1>
-		<p class="text-sm text-base-content/70">
-			Phase 8 settings plus Phase 7 controls for PWA install and push notifications.
-		</p>
-	</header>
+<div class="mx-auto max-w-2xl space-y-10 pb-24">
+	<!-- ─── Title ─── -->
+	<h1 class="text-2xl font-bold tracking-tight">Settings</h1>
 
 	{#if settings}
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="text-lg font-semibold">General Preferences</h2>
-			<div class="mt-3 grid gap-3 md:grid-cols-2">
-				<div class="form-control">
-					<span class="label-text">Default Model</span>
-					<ModelSelector value={settings.defaultModel} onchange={(id: string) => { if (settings) settings.defaultModel = id }} />
+		<!-- ════════════════════════════════════════════════
+		     MODEL & AI
+		     ════════════════════════════════════════════════ -->
+		<section>
+			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>Model & AI
+			</p>
+			<div class="rounded-xl bg-base-200/40 px-4">
+				<!-- Default Model -->
+				<div class="flex items-center justify-between gap-4 py-3.5">
+					<div>
+						<p class="text-sm font-medium">Default Model</p>
+						<p class="mt-0.5 text-xs text-base-content/40">Primary model for new conversations</p>
+					</div>
+					<div class="w-64">
+						<ModelSelector
+							value={settings.defaultModel}
+							showChevron={false}
+							showBrowseBadge={false}
+							onchange={(id: string) => {
+								if (settings) settings.defaultModel = id;
+							}}
+						/>
+					</div>
 				</div>
-				<label class="form-control">
-					<span class="label-text">Theme</span>
-					<select class="select select-bordered" bind:value={settings.theme}>
-						<option value="drokbot">drokbot</option>
-						<option value="drokbot-night">drokbot-night</option>
-					</select>
-				</label>
-				<label class="form-control">
-					<span class="label-text">Dream Auto Run</span>
-					<select
-						class="select select-bordered"
-						value={settings.dreamConfig.autoRun ? 'true' : 'false'}
-						onchange={(e) => {
-							updateDreamAutoRun((e.currentTarget as HTMLSelectElement).value === 'true');
-						}}
-					>
-						<option value="true">enabled</option>
-						<option value="false">disabled</option>
-					</select>
-				</label>
-				<label class="form-control">
-					<span class="label-text">Dream Frequency (hours)</span>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Dream Auto Run -->
+				<div class="flex items-center justify-between gap-4 py-3.5">
+					<div>
+						<p class="text-sm font-medium">Dream Auto Run</p>
+						<p class="mt-0.5 text-xs text-base-content/40">Automatically run dream cycles on schedule</p>
+					</div>
 					<input
-						type="number"
-						class="input input-bordered"
-						min="1"
-						max="720"
-						bind:value={settings.dreamConfig.frequencyHours}
+						type="checkbox"
+						class="toggle toggle-primary toggle-sm"
+						bind:checked={settings.dreamConfig.autoRun}
+						onchange={(e) => updateDreamAutoRun((e.currentTarget as HTMLInputElement).checked)}
 					/>
-				</label>
-				<label class="form-control md:col-span-2">
-					<span class="label-text">Dream Aggressiveness ({settings.dreamConfig.aggressiveness.toFixed(2)})</span>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Dream Frequency -->
+				<div class="flex items-center justify-between gap-4 py-3.5">
+					<div>
+						<p class="text-sm font-medium">Dream Frequency</p>
+						<p class="mt-0.5 text-xs text-base-content/40">Hours between automatic dream cycles</p>
+					</div>
+					<div class="flex items-center gap-1.5">
+						<input
+							type="number"
+							class="input input-bordered input-sm w-20 text-right font-mono"
+							min="1"
+							max="720"
+							bind:value={settings.dreamConfig.frequencyHours}
+						/>
+						<span class="text-xs text-base-content/30">hrs</span>
+					</div>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Dream Aggressiveness -->
+				<div class="py-3.5">
+					<div class="flex items-center justify-between">
+						<p class="text-sm font-medium">Aggressiveness</p>
+						<span class="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-xs text-primary">{settings.dreamConfig.aggressiveness.toFixed(2)}</span>
+					</div>
 					<input
 						type="range"
 						min="0"
 						max="1"
 						step="0.05"
-						class="range"
+						class="range range-primary range-xs mt-3"
 						bind:value={settings.dreamConfig.aggressiveness}
 					/>
-				</label>
-			</div>
-
-			<div class="mt-4">
-				<h3 class="font-medium">Notification Preferences</h3>
-				<div class="mt-2 grid gap-2 md:grid-cols-2">
-					<label class="label cursor-pointer justify-start gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={settings.notificationPrefs.taskCompleted} />
-						<span class="label-text">Task completed alerts</span>
-					</label>
-					<label class="label cursor-pointer justify-start gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={settings.notificationPrefs.needsInput} />
-						<span class="label-text">Needs input alerts</span>
-					</label>
-					<label class="label cursor-pointer justify-start gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={settings.notificationPrefs.dreamSummary} />
-						<span class="label-text">Dream summary alerts</span>
-					</label>
-					<label class="label cursor-pointer justify-start gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={settings.notificationPrefs.agentErrors} />
-						<span class="label-text">Agent error alerts</span>
-					</label>
 				</div>
 			</div>
+		</section>
 
-			<div class="mt-4">
-				<h3 class="font-medium">Budget Limits</h3>
-				<p class="text-xs text-base-content/60">Set spending limits. Leave blank for no limit. Alerts trigger at 80% and 100%.</p>
-				<div class="mt-2 grid gap-3 md:grid-cols-2">
-					<label class="form-control">
-						<span class="label-text">Daily Limit ($)</span>
+		<!-- ════════════════════════════════════════════════
+		     CONTEXT WINDOW
+		     ════════════════════════════════════════════════ -->
+		<section>
+			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Context Window
+			</p>
+			<div class="rounded-xl bg-base-200/40 px-4">
+				<!-- Reserved Response -->
+				<div class="py-3.5">
+					<div class="flex items-center justify-between">
+						<p class="text-sm font-medium">Reserved Response</p>
+						<span class="rounded-md bg-secondary/10 px-2 py-0.5 font-mono text-xs text-secondary">{settings.contextConfig.reservedResponsePct.toFixed(0)}%</span>
+					</div>
+					<input
+						type="range"
+						min="10"
+						max="40"
+						step="1"
+						class="range range-secondary range-xs mt-3"
+						bind:value={settings.contextConfig.reservedResponsePct}
+					/>
+					<p class="mt-1.5 text-xs text-base-content/35">Size of the striped reserved segment in the context bar</p>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Auto-Compact Threshold -->
+				<div class="py-3.5">
+					<div class="flex items-center justify-between">
+						<p class="text-sm font-medium">Auto-Compact Threshold</p>
+						<span class="rounded-md bg-secondary/10 px-2 py-0.5 font-mono text-xs text-secondary">{settings.contextConfig.autoCompactThresholdPct.toFixed(0)}%</span>
+					</div>
+					<input
+						type="range"
+						min="40"
+						max="95"
+						step="1"
+						class="range range-secondary range-xs mt-3"
+						bind:value={settings.contextConfig.autoCompactThresholdPct}
+					/>
+					<p class="mt-1.5 text-xs text-base-content/35">Auto-compaction triggers when a model switch would exceed this</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- ════════════════════════════════════════════════
+		     NOTIFICATIONS
+		     ════════════════════════════════════════════════ -->
+		<section>
+			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent"></span>Notifications
+			</p>
+			<div class="rounded-xl bg-base-200/40 px-4">
+				<div class="flex items-center justify-between gap-4 py-3">
+					<p class="text-sm font-medium">Task completed</p>
+					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.taskCompleted} />
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+				<div class="flex items-center justify-between gap-4 py-3">
+					<p class="text-sm font-medium">Needs input</p>
+					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.needsInput} />
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+				<div class="flex items-center justify-between gap-4 py-3">
+					<p class="text-sm font-medium">Dream summary</p>
+					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.dreamSummary} />
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+				<div class="flex items-center justify-between gap-4 py-3">
+					<p class="text-sm font-medium">Agent errors</p>
+					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.agentErrors} />
+				</div>
+			</div>
+		</section>
+
+		<!-- ════════════════════════════════════════════════
+		     BUDGET
+		     ════════════════════════════════════════════════ -->
+		<section>
+			<p class="mb-1.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-warning"></span>Budget
+			</p>
+			<p class="mb-3 pl-4 text-xs text-base-content/35">Alerts trigger at 80 % and 100 %</p>
+			<div class="rounded-xl bg-base-200/40 px-4">
+				<div class="flex items-center justify-between gap-4 py-3.5">
+					<p class="text-sm font-medium">Daily limit</p>
+					<div class="flex items-center gap-1.5">
+						<span class="text-xs text-base-content/30">$</span>
 						<input
 							type="number"
-							class="input input-bordered"
+							class="input input-bordered input-sm w-28 text-right font-mono"
 							min="0"
 							step="0.01"
 							placeholder="No limit"
@@ -319,12 +405,16 @@
 								settings = { ...settings, budgetConfig: { ...settings.budgetConfig, dailyLimit: val ? Number(val) : null } };
 							}}
 						/>
-					</label>
-					<label class="form-control">
-						<span class="label-text">Monthly Limit ($)</span>
+					</div>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+				<div class="flex items-center justify-between gap-4 py-3.5">
+					<p class="text-sm font-medium">Monthly limit</p>
+					<div class="flex items-center gap-1.5">
+						<span class="text-xs text-base-content/30">$</span>
 						<input
 							type="number"
-							class="input input-bordered"
+							class="input input-bordered input-sm w-28 text-right font-mono"
 							min="0"
 							step="0.01"
 							placeholder="No limit"
@@ -335,76 +425,119 @@
 								settings = { ...settings, budgetConfig: { ...settings.budgetConfig, monthlyLimit: val ? Number(val) : null } };
 							}}
 						/>
-					</label>
+					</div>
 				</div>
-			</div>
-
-			<div class="mt-4 flex flex-wrap gap-2">
-				<button class="btn btn-primary" type="button" onclick={saveSettings} disabled={busy}>Save Settings</button>
-				<button class="btn btn-outline" type="button" onclick={resetSettingsToDefault} disabled={busy}>Reset Defaults</button>
 			</div>
 		</section>
 	{/if}
 
-	<section class="grid gap-4 lg:grid-cols-2">
-		<article class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="text-lg font-semibold">App Install</h2>
-			<p class="mt-1 text-sm text-base-content/70">Install DrokBot as a standalone app for desktop and mobile.</p>
-			<button class="btn btn-primary mt-3" type="button" onclick={promptInstall} disabled={!installAvailable}>
-				Install App
-			</button>
-		</article>
-
-		<article class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="text-lg font-semibold">Push Notifications</h2>
-			<p class="mt-1 text-sm text-base-content/70">
-				Current status: {pushEnabled ? 'enabled' : 'disabled'} ({subscriptions.length} subscriptions)
-			</p>
-			<div class="mt-3 flex flex-wrap gap-2">
-				<button class="btn btn-success" type="button" onclick={enablePush} disabled={busy}>Enable Push</button>
-				<button class="btn btn-outline" type="button" onclick={disablePush} disabled={busy}>Disable Push</button>
+	<!-- ════════════════════════════════════════════════
+	     APP & PUSH
+	     ════════════════════════════════════════════════ -->
+	<section>
+		<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-info"></span>App & Push
+		</p>
+		<div class="rounded-xl bg-base-200/40 px-4">
+			<!-- Install -->
+			<div class="flex items-center justify-between gap-4 py-3.5">
+				<div>
+					<p class="text-sm font-medium">Install App</p>
+					<p class="mt-0.5 text-xs text-base-content/40">Standalone desktop & mobile app</p>
+				</div>
+				<button
+					class="btn btn-primary btn-sm btn-outline"
+					type="button"
+					onclick={promptInstall}
+					disabled={!installAvailable}
+				>
+					{installAvailable ? 'Install' : 'Installed'}
+				</button>
 			</div>
-			{#if statusMessage}
-				<p class="mt-2 text-sm text-base-content/70">{statusMessage}</p>
-			{/if}
-		</article>
-	</section>
+			<div class="border-t border-base-content/[.06]"></div>
 
-	<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<h2 class="text-lg font-semibold">Send Test Notification</h2>
-		<div class="mt-3 grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
-			<input class="input input-bordered" bind:value={testTitle} placeholder="Title" />
-			<input class="input input-bordered" bind:value={testBody} placeholder="Body" />
-			<input class="input input-bordered" bind:value={testUrl} placeholder="URL" />
-			<button class="btn btn-secondary" type="button" onclick={sendTest} disabled={busy}>Send</button>
+			<!-- Push -->
+			<div class="flex items-center justify-between gap-4 py-3.5">
+				<div>
+					<p class="text-sm font-medium">Push Notifications</p>
+					<p class="mt-0.5 text-xs text-base-content/40">
+						{pushEnabled ? 'Enabled' : 'Disabled'} &middot; {subscriptions.length} subscription{subscriptions.length !== 1 ? 's' : ''}
+					</p>
+				</div>
+				<div class="flex gap-1.5">
+					{#if pushEnabled}
+						<button class="btn btn-ghost btn-sm" type="button" onclick={disablePush} disabled={busy}>Disable</button>
+					{:else}
+						<button class="btn btn-success btn-sm" type="button" onclick={enablePush} disabled={busy}>Enable</button>
+					{/if}
+				</div>
+			</div>
 		</div>
 	</section>
 
-	<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<h2 class="text-lg font-semibold">Notification Feed</h2>
-		{#if notifications.length === 0}
-			<p class="mt-2 text-sm text-base-content/70">No notifications recorded yet.</p>
-		{:else}
-			<div class="mt-2 space-y-2">
-				{#each notifications as item (item.id)}
-					<article class="rounded-xl border border-base-300 bg-base-50 p-3">
-						<div class="flex items-start justify-between gap-2">
-							<div>
-								<p class="font-medium">{item.title}</p>
-								<p class="text-sm text-base-content/70">{item.body}</p>
-								<p class="text-xs text-base-content/60">{new Date(item.createdAt).toLocaleString()}</p>
-							</div>
-							<div class="flex gap-1">
+	<!-- ════════════════════════════════════════════════
+	     DEVELOPER TOOLS  (collapsible)
+	     ════════════════════════════════════════════════ -->
+	<details class="group">
+		<summary class="mb-3 flex cursor-pointer items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40 select-none">
+			<span class="inline-block h-1.5 w-1.5 rounded-full bg-error"></span>Developer Tools
+			<svg class="ml-auto h-3.5 w-3.5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7" /></svg>
+		</summary>
+		<div class="space-y-3">
+			<!-- Test Notification -->
+			<div class="rounded-xl bg-base-200/40 px-4 py-3.5">
+				<p class="mb-2.5 text-sm font-medium">Send Test Notification</p>
+				<div class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+					<input class="input input-bordered input-sm" bind:value={testTitle} placeholder="Title" />
+					<input class="input input-bordered input-sm" bind:value={testBody} placeholder="Body" />
+					<button class="btn btn-secondary btn-sm" type="button" onclick={sendTest} disabled={busy}>Send</button>
+				</div>
+			</div>
+
+			<!-- Notification Feed -->
+			<div class="rounded-xl bg-base-200/40 px-4 py-3.5">
+				<p class="mb-2 text-sm font-medium">Notification Feed</p>
+				{#if notifications.length === 0}
+					<p class="text-xs text-base-content/40">No notifications recorded yet.</p>
+				{:else}
+					<div class="space-y-1.5">
+						{#each notifications as item (item.id)}
+							<div class="flex items-start justify-between gap-3 rounded-lg bg-base-300/30 px-3 py-2">
+								<div class="min-w-0">
+									<p class="truncate text-sm font-medium">{item.title}</p>
+									<p class="truncate text-xs text-base-content/50">{item.body}</p>
+									<p class="mt-0.5 text-[10px] text-base-content/30">{new Date(item.createdAt).toLocaleString()}</p>
+								</div>
 								{#if item.read}
-									<button class="btn btn-xs" type="button" onclick={() => markRead(item.id, false)}>Unread</button>
+									<button class="btn btn-ghost btn-xs shrink-0" type="button" onclick={() => markRead(item.id, false)}>Unread</button>
 								{:else}
-									<button class="btn btn-xs" type="button" onclick={() => markRead(item.id, true)}>Read</button>
+									<button class="btn btn-ghost btn-xs shrink-0" type="button" onclick={() => markRead(item.id, true)}>Read</button>
 								{/if}
 							</div>
-						</div>
-					</article>
-				{/each}
+						{/each}
+					</div>
+				{/if}
 			</div>
+		</div>
+	</details>
+
+	<!-- ════════════════════════════════════════════════
+	     STICKY SAVE BAR
+	     ════════════════════════════════════════════════ -->
+	<div class="sticky bottom-0 -mx-4 flex items-center justify-between rounded-t-xl border-t border-base-content/[.06] bg-base-100/80 px-5 py-3 backdrop-blur-xl sm:-mx-6">
+		{#if statusMessage}
+			<p class="text-sm font-medium text-success">{statusMessage}</p>
+		{:else}
+			<span></span>
 		{/if}
-	</section>
-</section>
+		<div class="flex gap-2">
+			<button class="btn btn-ghost btn-sm" type="button" onclick={resetSettingsToDefault} disabled={busy}>Reset Defaults</button>
+			<button class="btn btn-primary btn-sm" type="button" onclick={saveSettings} disabled={busy}>
+				{#if busy}
+					<span class="loading loading-spinner loading-xs"></span>
+				{/if}
+				Save Changes
+			</button>
+		</div>
+	</div>
+</div>

@@ -2,8 +2,10 @@
 	import { getConversations } from '$lib/chat';
 
 	type Conversation = Awaited<ReturnType<typeof getConversations>>[number];
+	type GroupMode = 'date' | 'category';
 
 	let conversations = $state<Conversation[]>([]);
+	let groupMode = $state<GroupMode>('date');
 
 	$effect(() => {
 		void loadConversations();
@@ -24,32 +26,98 @@
 		return `${days}d ago`;
 	}
 
-	const grouped = $derived.by(() => {
-		const now = Date.now();
-		const day = 86_400_000;
-		const today: Conversation[] = [];
-		const week: Conversation[] = [];
-		const older: Conversation[] = [];
+	function formatDayLabel(date: Date) {
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
 
-		for (const c of conversations) {
-			const age = now - new Date(c.updatedAt).getTime();
-			if (age < day) today.push(c);
-			else if (age < day * 7) week.push(c);
-			else older.push(c);
+		const target = new Date(date);
+		target.setHours(0, 0, 0, 0);
+
+		const dayDiff = Math.round((today.getTime() - target.getTime()) / 86_400_000);
+		if (dayDiff === 0) return 'Today';
+		if (dayDiff === 1) return 'Yesterday';
+
+		return new Intl.DateTimeFormat(undefined, {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		}).format(date);
+	}
+
+	function dayKey(date: Date | string) {
+		const d = new Date(date);
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${y}-${m}-${day}`;
+	}
+
+	const grouped = $derived.by(() => {
+		const sorted = [...conversations].sort(
+			(a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+		);
+
+		if (groupMode === 'category') {
+			const categoryMap = new Map<string, Conversation[]>();
+			for (const c of sorted) {
+				const label = c.category?.trim() || 'Uncategorized';
+				const bucket = categoryMap.get(label);
+				if (bucket) {
+					bucket.push(c);
+				} else {
+					categoryMap.set(label, [c]);
+				}
+			}
+
+			const labels = [...categoryMap.keys()].sort((a, b) => {
+				if (a === 'Uncategorized') return 1;
+				if (b === 'Uncategorized') return -1;
+				return a.localeCompare(b);
+			});
+
+			return labels.map((label) => ({
+				label,
+				items: categoryMap.get(label) ?? []
+			}));
 		}
 
-		const groups: { label: string; items: Conversation[] }[] = [];
-		if (today.length) groups.push({ label: 'Today', items: today });
-		if (week.length) groups.push({ label: 'This week', items: week });
-		if (older.length) groups.push({ label: 'Older', items: older });
-		return groups;
+		const dateMap = new Map<string, { label: string; timestamp: number; items: Conversation[] }>();
+		for (const c of sorted) {
+			const updated = new Date(c.updatedAt);
+			const key = dayKey(updated);
+			const existing = dateMap.get(key);
+			if (existing) {
+				existing.items.push(c);
+			} else {
+				const dayStart = new Date(updated);
+				dayStart.setHours(0, 0, 0, 0);
+				dateMap.set(key, {
+					label: formatDayLabel(updated),
+					timestamp: dayStart.getTime(),
+					items: [c]
+				});
+			}
+		}
+
+		return [...dateMap.values()]
+			.sort((a, b) => b.timestamp - a.timestamp)
+			.map((group) => ({
+				label: group.label,
+				items: group.items
+			}));
 	});
 </script>
 
 <div class="flex h-full flex-col">
 	<div class="flex items-center justify-between">
 		<h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Chats</h2>
-		<a href="/chat" class="text-xs text-primary hover:underline">View all</a>
+		<label class="flex items-center gap-2 text-xs text-base-content/60">
+			<span>Group</span>
+			<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
+				<option value="date">Date</option>
+				<option value="category">Category</option>
+			</select>
+		</label>
 	</div>
 
 	<div class="mt-3 flex-1 space-y-4 overflow-y-auto">

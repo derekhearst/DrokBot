@@ -9,6 +9,8 @@
 		getConversation,
 		getMessageStats
 	} from '$lib/chat';
+	import { getAvailableModels } from '$lib/llm';
+	import { getSettings } from '$lib/settings';
 	import ChatInput from '$lib/components/chat/ChatInput.svelte';
 	import ContextWindow from '$lib/components/chat/ContextWindow.svelte';
 	import MessageBubble from '$lib/components/chat/MessageBubble.svelte';
@@ -26,8 +28,11 @@
 	let stoppedByUser = $state(false);
 	let conversationData = $state<Awaited<ReturnType<typeof getConversation>> | null>(null);
 	let stats = $state<Awaited<ReturnType<typeof getMessageStats>>>([]);
+	let availableModels = $derived(await getAvailableModels());
+	let appSettings = $derived(await getSettings());
 	let messagesEl = $state<HTMLDivElement | undefined>(undefined);
 	let consumedInitialPrompt = $state(false);
+	let modelSwitchNotice = $state<string | null>(null);
 
 	async function scrollToBottom() {
 		await tick();
@@ -49,6 +54,8 @@
 
 	const messages = $derived(conversationData?.messages ?? []);
 	const initialPrompt = $derived(page.url.searchParams.get('prompt')?.trim() ?? '');
+	const estimateTokens = (value: string | null | undefined) =>
+		Math.max(0, Math.ceil((value?.length ?? 0) / 4));
 	const displayedMessages = $derived.by(() => {
 		const remoteMessages = messages;
 		const remoteIds = new Set(remoteMessages.map((message) => message.id));
@@ -99,7 +106,74 @@
 		return combined;
 	});
 
-	const usedTokens = $derived(stats.reduce((sum, row) => sum + row.tokensIn + row.tokensOut, 0));
+	const activeContextLimit = $derived.by(() => {
+		const selected = availableModels.find((candidate) => candidate.id === model);
+		return selected?.contextLength && selected.contextLength > 0 ? selected.contextLength : 128000;
+	});
+	const reservedResponsePct = $derived(appSettings?.contextConfig?.reservedResponsePct ?? 30);
+	const autoCompactThresholdPct = $derived(appSettings?.contextConfig?.autoCompactThresholdPct ?? 72);
+
+	const contextMetrics = $derived.by(() => {
+		const totalBudget = activeContextLimit;
+
+		const messageTokens = displayedMessages.reduce(
+			(sum, message) => sum + estimateTokens(message.content),
+			0
+		);
+
+		const toolResultTokens = displayedMessages.reduce((sum, message) => {
+			const calls = message.toolCalls ?? [];
+			for (const call of calls) {
+				const resultText =
+					typeof call.result === 'string' ? call.result : JSON.stringify(call.result ?? {});
+				sum += estimateTokens(resultText);
+			}
+			return sum;
+		}, 0);
+
+		const systemTokens = 900;
+		const toolDefinitionTokens = 900;
+		const otherTokens = 0;
+
+		const used = Math.min(
+			totalBudget,
+			systemTokens + toolDefinitionTokens + messageTokens + toolResultTokens + otherTokens
+		);
+
+		const toPct = (value: number) =>
+			totalBudget > 0 ? Math.max(0, Number(((value / totalBudget) * 100).toFixed(1))) : 0;
+
+		const modelTokenMap = new Map<string, number>();
+		for (const row of stats) {
+			if (row.role !== 'assistant') continue;
+			const modelLabel = (row.model ?? 'unknown').split('/').at(-1) ?? row.model ?? 'unknown';
+			const modelTokens = row.tokensOut > 0 ? row.tokensOut : estimateTokens(messages.find((m) => m.id === row.id)?.content);
+			modelTokenMap.set(modelLabel, (modelTokenMap.get(modelLabel) ?? 0) + modelTokens);
+		}
+
+		const modelTotal = [...modelTokenMap.values()].reduce((sum, value) => sum + value, 0);
+		const modelPalette = ['var(--color-primary)', 'var(--color-secondary)', 'var(--color-accent)', 'var(--color-info)'];
+		const modelUsage = [...modelTokenMap.entries()]
+			.sort((a, b) => b[1] - a[1])
+			.map(([label, value], idx) => ({
+				label,
+				value: modelTotal > 0 ? Number(((value / modelTotal) * 100).toFixed(1)) : 0,
+				color: modelPalette[idx % modelPalette.length]
+			}));
+
+		return {
+			total: totalBudget,
+			used,
+			breakdown: {
+				system: toPct(systemTokens),
+				tools: toPct(toolDefinitionTokens),
+				messages: toPct(messageTokens),
+				results: toPct(toolResultTokens),
+				other: toPct(otherTokens)
+			},
+			modelUsage
+		};
+	});
 
 	$effect(() => {
 		if (conversationData?.conversation.model) {
@@ -282,6 +356,38 @@
 		await streamMessage('regenerate', true);
 	}
 
+	function getContextLimitForModel(modelId: string) {
+		const selected = availableModels.find((candidate) => candidate.id === modelId);
+		return selected?.contextLength && selected.contextLength > 0 ? selected.contextLength : 128000;
+	}
+
+	async function maybeCompactBeforeModelSwitch(nextModel: string) {
+		const currentModel = model;
+		if (!nextModel || nextModel === currentModel) return;
+		if (streaming) {
+			modelSwitchNotice = 'Wait for the current response to finish before switching models.';
+			setTimeout(() => {
+				modelSwitchNotice = null;
+			}, 3500);
+			return;
+		}
+
+		const currentLimit = getContextLimitForModel(currentModel);
+		const nextLimit = getContextLimitForModel(nextModel);
+		const projectedPct = nextLimit > 0 ? (contextMetrics.used / nextLimit) * 100 : 0;
+
+		if (nextLimit < currentLimit && projectedPct >= autoCompactThresholdPct) {
+			const compactionPrompt = `Please compact this conversation for handoff to a model with a smaller context window. Preserve all requirements, decisions, open tasks, constraints, and the latest user intent in a concise structured summary.`;
+			await streamMessage(compactionPrompt, false);
+			modelSwitchNotice = `Auto-compact ran on ${currentModel.split('/').at(-1)} before switching to ${nextModel.split('/').at(-1)}.`;
+			setTimeout(() => {
+				modelSwitchNotice = null;
+			}, 5000);
+		}
+
+		model = nextModel;
+	}
+
 	async function compactContext() {
 		console.log('Compact context requested for', conversationId);
 	}
@@ -290,24 +396,29 @@
 {#if !conversationData}
 	<p class="text-sm opacity-70">Conversation not found.</p>
 {:else}
-	<section class="flex min-h-0 w-full flex-1 flex-col gap-3 py-4">
+	<section class="flex min-h-0 w-full flex-1 flex-col gap-1 pt-0 pb-1">
 		<!-- Inline floating top bar: title · model · context stats -->
-		<div class="flex shrink-0 items-center gap-3 px-1">
+		<div class="flex shrink-0 items-center gap-2 px-0">
 			<h1 class="min-w-0 flex-1 truncate text-base font-semibold">
 				{conversationData.conversation.title}
 			</h1>
-			<span class="badge badge-ghost shrink-0 text-xs opacity-60">
-				{model.split('/').at(-1) ?? model}
-			</span>
 			<ContextWindow
-				used={usedTokens}
-				total={128000}
-				breakdown={{ system: 10, memories: 12, tools: 8, messages: 55, results: 15 }}
+				used={contextMetrics.used}
+				total={contextMetrics.total}
+				breakdown={contextMetrics.breakdown}
+				modelUsage={contextMetrics.modelUsage}
+				reservedTargetPct={reservedResponsePct}
 				onCompact={compactContext}
 			/>
 		</div>
 
-		<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-base-300 bg-base-100 p-4">
+		{#if modelSwitchNotice}
+			<div class="alert alert-info mt-1 mb-1 py-2 text-sm">
+				<span>{modelSwitchNotice}</span>
+			</div>
+		{/if}
+
+		<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-2 overflow-y-auto px-0.5 py-1">
 			{#each displayedMessages as message (message.id)}
 				<MessageBubble message={message} onEdit={handleEdit} onRegenerate={handleRegenerate} />
 			{/each}
@@ -329,16 +440,16 @@
 			<p class="text-sm text-error">{streamError}</p>
 		{/if}
 
-		<ChatInput
-			busy={streaming}
-			onCancelGeneration={stopStreaming}
-			model={model}
-			onModelChange={(next) => {
-				model = next;
-			}}
-			onSubmit={(content) => streamMessage(content, false)}
-			estimatedRemaining={Math.max(0, 128000 - usedTokens)}
-		/>
+		<div class="chat-composer-transition">
+			<ChatInput
+				busy={streaming}
+				onCancelGeneration={stopStreaming}
+				model={model}
+				onModelChange={(next) => maybeCompactBeforeModelSwitch(next)}
+				onSubmit={(content) => streamMessage(content, false)}
+				estimatedRemaining={Math.max(0, contextMetrics.total - contextMetrics.used)}
+			/>
+		</div>
 	</section>
 {/if}
 

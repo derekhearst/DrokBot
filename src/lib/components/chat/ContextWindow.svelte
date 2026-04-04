@@ -3,67 +3,161 @@
 		used = 0,
 		total = 128000,
 		breakdown,
+		modelUsage = [],
+		reservedTargetPct = 30,
 		onCompact
 	} = $props<{
 		used?: number;
 		total?: number;
 		reserved?: number;
-		breakdown?: { system: number; memories: number; tools: number; messages: number; results: number };
+		breakdown?: { system: number; tools: number; messages: number; results: number; other: number };
+		modelUsage?: Array<{ label: string; value: number; color?: string }>;
+		reservedTargetPct?: number;
 		onCompact?: (() => Promise<void> | void) | undefined;
 	}>();
 
 	const pct = $derived(total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0);
 	const usedK = $derived((used / 1000).toFixed(1));
 	const totalK = $derived((total / 1000).toFixed(0));
+	const reservedPct = $derived(Math.max(0, Math.min(reservedTargetPct, 100 - pct)));
+	const reservedStart = $derived(Math.max(0, Math.min(100, pct)));
+	const ringDegrees = $derived(Math.max(0, Math.min(360, (pct / 100) * 360)));
+	const formatPct = (value: number) => `${Number(value.toFixed(1))}%`;
 
-	const stats = $derived([
-		{ icon: '⚡', label: 'System', value: breakdown?.system ?? 0, bar: 'bg-info' },
-		{ icon: '🧠', label: 'Memories', value: breakdown?.memories ?? 0, bar: 'bg-success' },
-		{ icon: '🔧', label: 'Tools', value: breakdown?.tools ?? 0, bar: 'bg-warning' },
-		{ icon: '💬', label: 'Messages', value: breakdown?.messages ?? 0, bar: 'bg-primary' },
-		{ icon: '📊', label: 'Results', value: breakdown?.results ?? 0, bar: 'bg-secondary' }
+	const systemRows = $derived([
+		{ label: 'System Instructions', value: breakdown?.system ?? 0 },
+		{ label: 'Tool Definitions', value: breakdown?.tools ?? 0 }
+	]);
+
+	const userRows = $derived([
+		{ label: 'Messages', value: breakdown?.messages ?? 0 },
+		{ label: 'Tool Results', value: breakdown?.results ?? 0 }
+	]);
+
+	const uncategorizedRows = $derived([
+		{ label: 'Other', value: breakdown?.other ?? 0 }
 	]);
 </script>
 
-<div class="flex items-center gap-3 text-xs text-base-content/50">
-	<!-- Segmented bar: overall fill, then sub-segments inside -->
-	<div
-		class="relative h-1.5 w-24 overflow-hidden rounded-full bg-base-300"
+<details class="dropdown dropdown-end">
+	<summary
+		class="context-ring btn btn-ghost btn-circle h-9 min-h-0 w-9 rounded-full border border-base-300 p-0 text-[11px] font-semibold tabular-nums"
+		style={`--ctx-fill:${ringDegrees}deg;`}
+		aria-label={`Context window usage ${pct}%`}
 		title={`${usedK}K / ${totalK}K tokens (${pct}%)`}
 	>
-		<div class="absolute inset-y-0 left-0 flex" style={`width:${pct}%`}>
-			{#each stats as stat (stat.label)}
-				{#if stat.value > 0}
-					<div
-						class="{stat.bar} h-full"
-						style={`width:${stat.value}%`}
-						title={`${stat.label}: ${stat.value}%`}
-					></div>
-				{/if}
+		<span>{pct}%</span>
+	</summary>
+
+	<div class="dropdown-content z-30 mt-2 w-72 rounded-xl border border-base-300 bg-base-100/95 p-3 text-sm shadow-xl backdrop-blur">
+		<h3 class="mb-1 text-base font-semibold">Context Window</h3>
+		<p class="font-mono text-xs opacity-80">{usedK}K / {totalK}K tokens</p>
+
+		<div class="mt-2 flex items-center gap-2">
+			<div class="ctx-track relative h-2 flex-1 overflow-hidden rounded-full border border-base-300/60 bg-base-200/70">
+				<div class="ctx-used absolute inset-y-0 left-0 bg-primary/75" style={`width:${pct}%`}></div>
+				<div
+					class="ctx-reserved-bar absolute inset-y-0"
+					style={`left:${reservedStart}%; width:${reservedPct}%`}
+				></div>
+			</div>
+			<span class="w-10 text-right text-xs tabular-nums opacity-75">{formatPct(pct)}</span>
+		</div>
+
+		<div class="mt-2 flex items-center gap-2 text-xs opacity-75">
+			<span class="inline-block h-2.5 w-2.5 rounded-[2px] border border-primary/70 bg-primary/70"></span>
+			<span>Used by prompt</span>
+		</div>
+		<div class="mt-1 flex items-center gap-2 text-xs opacity-75">
+			<span class="context-reserved inline-block h-2.5 w-2.5 rounded-[2px] border border-primary/50"></span>
+			<span>Reserved for response</span>
+			<span class="ml-auto tabular-nums">{formatPct(reservedPct)}</span>
+		</div>
+
+		<div class="mt-3 space-y-1">
+			<p class="text-xs font-semibold uppercase tracking-wide opacity-60">Model Usage</p>
+			<div class="mt-1 flex h-2 overflow-hidden rounded-full border border-base-300/60 bg-base-200/70">
+				{#each modelUsage as model (model.label)}
+					<div style={`width:${model.value}%;background:${model.color ?? 'var(--color-primary)'}`}></div>
+				{/each}
+			</div>
+			{#if modelUsage.length === 0}
+				<p class="text-xs opacity-60">No model usage yet</p>
+			{:else}
+				{#each modelUsage as model (model.label)}
+					<div class="flex items-center justify-between text-sm">
+						<span class="flex items-center gap-2 opacity-85">
+							<span class="inline-block h-2.5 w-2.5 rounded-full" style={`background:${model.color ?? 'var(--color-primary)'}`}></span>
+							{model.label}
+						</span>
+						<span class="tabular-nums opacity-75">{formatPct(model.value)}</span>
+					</div>
+				{/each}
+			{/if}
+		</div>
+
+		<div class="mt-3 space-y-1">
+			<p class="text-xs font-semibold uppercase tracking-wide opacity-60">System</p>
+			{#each systemRows as row (row.label)}
+				<div class="flex items-center justify-between text-sm">
+					<span class="opacity-85">{row.label}</span>
+					<span class="tabular-nums opacity-75">{formatPct(row.value)}</span>
+				</div>
 			{/each}
 		</div>
+
+		<div class="mt-3 space-y-1">
+			<p class="text-xs font-semibold uppercase tracking-wide opacity-60">User Context</p>
+			{#each userRows as row (row.label)}
+				<div class="flex items-center justify-between text-sm">
+					<span class="opacity-85">{row.label}</span>
+					<span class="tabular-nums opacity-75">{formatPct(row.value)}</span>
+				</div>
+			{/each}
+		</div>
+
+		<div class="mt-3 space-y-1">
+			<p class="text-xs font-semibold uppercase tracking-wide opacity-60">Uncategorized</p>
+			{#each uncategorizedRows as row (row.label)}
+				<div class="flex items-center justify-between text-sm">
+					<span class="opacity-85">{row.label}</span>
+					<span class="tabular-nums opacity-75">{formatPct(row.value)}</span>
+				</div>
+			{/each}
+		</div>
+
+		{#if onCompact}
+			<button class="btn btn-sm mt-3 w-full" type="button" onclick={() => onCompact?.()}>
+				Compact Conversation
+			</button>
+		{/if}
 	</div>
+</details>
 
-	<!-- Stat chips -->
-	{#each stats as stat (stat.label)}
-		<span class="tooltip tooltip-bottom" data-tip="{stat.label}: {stat.value}%">
-			<span class="flex cursor-default items-center gap-0.5">
-				<span class="text-[0.7rem] leading-none">{stat.icon}</span>
-				<span class="tabular-nums">{stat.value}%</span>
-			</span>
-		</span>
-	{/each}
+<style>
+	.context-ring {
+		background:
+			conic-gradient(var(--color-primary) var(--ctx-fill), color-mix(in oklab, var(--color-base-300) 82%, transparent) 0deg),
+			radial-gradient(circle, var(--color-base-100) 62%, transparent 63%);
+	}
 
-	<!-- Token count -->
-	<span class="ml-1 font-mono opacity-60">{usedK}K<span class="opacity-50">/{totalK}K</span></span>
+	.context-reserved {
+		background-image: repeating-linear-gradient(
+			-45deg,
+			color-mix(in oklab, var(--color-primary) 65%, transparent) 0,
+			color-mix(in oklab, var(--color-primary) 65%, transparent) 2px,
+			transparent 2px,
+			transparent 5px
+		);
+	}
 
-	{#if onCompact}
-		<button
-			class="btn btn-xs btn-ghost h-5 min-h-0 px-1.5 opacity-40 hover:opacity-100"
-			type="button"
-			onclick={() => onCompact?.()}
-		>
-			compact
-		</button>
-	{/if}
-</div>
+	.ctx-reserved-bar {
+		background-image: repeating-linear-gradient(
+			-45deg,
+			color-mix(in oklab, var(--color-primary) 60%, transparent) 0,
+			color-mix(in oklab, var(--color-primary) 60%, transparent) 2px,
+			transparent 2px,
+			transparent 6px
+		);
+	}
+</style>

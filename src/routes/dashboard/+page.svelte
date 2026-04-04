@@ -40,8 +40,8 @@
 	);
 </script>
 
-<section class="space-y-5">
-	<header class="rounded-3xl border border-base-300 bg-base-100 p-5">
+<section class="space-y-4 pt-1">
+	<header class="rounded-3xl border border-base-300 bg-base-100 p-4">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
 				<h1 class="text-3xl font-bold">DrokBot Dashboard</h1>
@@ -49,7 +49,19 @@
 					Live system snapshot for chat, agents, memory, and workflow queues.
 				</p>
 			</div>
-			<button class="btn btn-outline" type="button" onclick={load} disabled={loading}>Refresh</button>
+			<button class="btn btn-sm rounded-xl border-base-300 bg-base-200/70 hover:bg-base-200" type="button" onclick={load} disabled={loading} aria-label="Refresh dashboard">
+				{#if loading}
+					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
+				{:else}
+					<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M21 2v6h-6"></path>
+						<path d="M3 11a9 9 0 0 1 15-6.7L21 8"></path>
+						<path d="M3 22v-6h6"></path>
+						<path d="M21 13a9 9 0 0 1-15 6.7L3 16"></path>
+					</svg>
+				{/if}
+				<span>{loading ? 'Refreshing' : 'Refresh'}</span>
+			</button>
 		</div>
 	</header>
 

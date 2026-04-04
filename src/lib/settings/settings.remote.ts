@@ -4,7 +4,7 @@ import { getOrCreateSettings, resetSettings, updateSettings } from '$lib/setting
 
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),
-	theme: z.enum(['drokbot', 'drokbot-night']).optional(),
+	theme: z.enum(['drokbot-night']).optional(),
 	notificationPrefs: z
 		.object({
 			taskCompleted: z.boolean().optional(),
@@ -29,6 +29,12 @@ const settingsUpdateSchema = z.object({
 		.object({
 			dailyLimit: z.number().min(0).nullable().optional(),
 			monthlyLimit: z.number().min(0).nullable().optional(),
+		})
+		.optional(),
+	contextConfig: z
+		.object({
+			reservedResponsePct: z.number().min(10).max(40).optional(),
+			autoCompactThresholdPct: z.number().min(40).max(95).optional(),
 		})
 		.optional(),
 })

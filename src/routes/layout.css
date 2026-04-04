@@ -2,39 +2,8 @@
 @plugin 'daisyui';
 
 @plugin 'daisyui/theme' {
-	name: 'drokbot';
-	default: true;
-	prefersdark: false;
-	color-scheme: light;
-	--color-base-100: oklch(98% 0.02 95);
-	--color-base-200: oklch(95% 0.035 92);
-	--color-base-300: oklch(90% 0.03 90);
-	--color-base-content: oklch(28% 0.03 260);
-	--color-primary: oklch(74% 0.24 133);
-	--color-primary-content: oklch(20% 0.05 133);
-	--color-secondary: oklch(78% 0.18 142);
-	--color-secondary-content: oklch(20% 0.04 142);
-	--color-accent: oklch(70% 0.2 155);
-	--color-accent-content: oklch(16% 0.04 155);
-	--color-neutral: oklch(32% 0.03 260);
-	--color-neutral-content: oklch(95% 0.01 80);
-	--color-info: oklch(71% 0.16 238);
-	--color-success: oklch(74% 0.22 136);
-	--color-warning: oklch(79% 0.17 84);
-	--color-error: oklch(62% 0.2 24);
-	--radius-selector: 0.9rem;
-	--radius-field: 0.75rem;
-	--radius-box: 1.1rem;
-	--size-selector: 0.24rem;
-	--size-field: 0.24rem;
-	--border: 1px;
-	--depth: 1;
-	--noise: 0;
-}
-
-@plugin 'daisyui/theme' {
 	name: 'drokbot-night';
-	default: false;
+	default: true;
 	prefersdark: true;
 	color-scheme: dark;
 	--color-base-100: oklch(18% 0.02 250);
@@ -113,6 +82,19 @@ body::before {
 		opacity 220ms ease,
 		filter 280ms ease;
 	animation: cursor-flicker 3.2s steps(2, jump-none) infinite;
+}
+
+.chat-composer-transition {
+	view-transition-name: chat-composer-shell;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	::view-transition-group(chat-composer-shell),
+	::view-transition-old(chat-composer-shell),
+	::view-transition-new(chat-composer-shell) {
+		animation-duration: 360ms;
+		animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+	}
 }
 
 @keyframes shell-fade {
