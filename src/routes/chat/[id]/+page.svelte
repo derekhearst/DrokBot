@@ -16,8 +16,8 @@
 	import ContextWindow from '$lib/components/chat/ContextWindow.svelte';
 	import MessageBubble from '$lib/components/chat/MessageBubble.svelte';
 	import LiveToolCallCard from '$lib/components/chat/LiveToolCallCard.svelte';
+	import { renderMarkdown } from '$lib/chat/markdown';
 	import ArtifactPanel from '$lib/components/artifacts/ArtifactPanel.svelte';
-	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type StreamingToolCall = {
 		id: string;
@@ -540,27 +540,26 @@
 </script>
 
 <div class="flex min-h-0 w-full flex-1 gap-0" class:artifact-split={artifactPanelMode === 'panel'}>
-	<section class="flex min-h-0 flex-1 flex-col gap-1 px-1 pt-0 pb-1 sm:px-0" class:max-w-full={artifactPanelMode !== 'panel'}>
+	<section class="flex min-h-0 flex-1 flex-col gap-1 px-1 pt-0 pb-2 sm:px-0" class:max-w-full={artifactPanelMode !== 'panel'}>
 		{#if !conversationData}
 			<div class="flex flex-1 items-center justify-center">
 				<span class="loading loading-spinner loading-sm opacity-50"></span>
 			</div>
 		{:else}
-			<ContentPanel compact>
-				{#snippet header()}
-					<h1 class="text-base font-semibold sm:text-lg">{conversationData?.conversation.title ?? 'Chat'}</h1>
-				{/snippet}
-				{#snippet actions()}
-					<ContextWindow
-						used={contextMetrics.used}
-						total={contextMetrics.total}
-						breakdown={contextMetrics.breakdown}
-						modelUsage={contextMetrics.modelUsage}
-						reservedTargetPct={reservedResponsePct}
-						onCompact={compactContext}
-					/>
-				{/snippet}
-			</ContentPanel>
+			<div class="flex items-center gap-2 px-1 py-1.5 lg:px-0">
+				<button onclick={() => goto('/')} class="btn btn-ghost btn-sm btn-circle lg:hidden" aria-label="Back to chats">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+				</button>
+				<h1 class="min-w-0 flex-1 truncate text-base font-semibold lg:text-lg">{conversationData?.conversation.title ?? 'Chat'}</h1>
+				<ContextWindow
+					used={contextMetrics.used}
+					total={contextMetrics.total}
+					breakdown={contextMetrics.breakdown}
+					modelUsage={contextMetrics.modelUsage}
+					reservedTargetPct={reservedResponsePct}
+					onCompact={compactContext}
+				/>
+			</div>
 
 			{#if modelSwitchNotice}
 				<div class="alert alert-info mt-1 mb-1 py-2 text-sm">
@@ -575,7 +574,7 @@
 
 				{#if waitingForFirstToken && streaming && !draftAssistant && streamingToolCalls.length === 0}
 					<article class="chat chat-start">
-						<div class="rounded-2xl bg-base-100/60 p-4">
+						<div>
 							<svg class="h-8 w-16" viewBox="0 0 80 32" aria-label="Assistant is generating a response">
 								<circle cx="16" cy="16" r="5" fill="currentColor" class="opacity-60">
 									<animate attributeName="r" values="5;7;5" dur="1.2s" repeatCount="indefinite" begin="0s" />
@@ -595,7 +594,7 @@
 				{:else if streaming}
 					{#if draftAssistant}
 						<article class="chat chat-start">
-							<div class="assistant-message rounded-2xl bg-base-100/60 p-4 whitespace-pre-wrap">{draftAssistant}</div>
+							<div class="assistant-message"><div class="markdown-body">{@html renderMarkdown(draftAssistant)}</div></div>
 						</article>
 					{/if}
 					{#if streamingToolCalls.length > 0}

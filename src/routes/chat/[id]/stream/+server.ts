@@ -136,7 +136,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	const userContent = body.content?.trim() ?? ''
-	const activeCapabilities = detectCapabilities(userContent, previousToolNames)
+
+	// --- Context Engineering: Unified System Prompt ---
+	const currentSettings = await getOrCreateSettings()
+	const contextConfig = currentSettings.contextConfig as {
+		capabilityOverrides?: Record<string, 'auto' | 'always' | 'off'>
+	} | undefined
+	const capabilityOverrides = contextConfig?.capabilityOverrides ?? {}
+
+	const activeCapabilities = detectCapabilities(userContent, previousToolNames, capabilityOverrides)
 
 	// --- Context Engineering: Conditional Memory ---
 	const fetchMemory = shouldFetchMemory(userContent)
@@ -151,9 +159,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			await Promise.all(memoryContext.memories.map((memory) => bumpAccessCount(memory.id)))
 		}
 	}
-
-	// --- Context Engineering: Unified System Prompt ---
-	const currentSettings = await getOrCreateSettings()
 
 	// Build skill summaries only if skills capability is active
 	let skillSummariesText: string | undefined

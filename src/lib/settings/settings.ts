@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS = {
 		reservedResponsePct: 30,
 		autoCompactThresholdPct: 72,
 		compactionModel: 'openai/gpt-4o-mini',
+		capabilityOverrides: {} as Record<string, 'auto' | 'always' | 'off'>,
 	},
 	toolConfig: {
 		approvalMode: 'auto' as const,
@@ -76,6 +77,7 @@ export async function updateSettings(input: {
 		reservedResponsePct?: number
 		autoCompactThresholdPct?: number
 		compactionModel?: string
+		capabilityOverrides?: Record<string, 'auto' | 'always' | 'off'>
 	}
 	toolConfig?: {
 		approvalMode?: 'auto' | 'confirm'

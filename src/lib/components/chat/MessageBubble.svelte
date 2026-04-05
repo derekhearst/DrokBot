@@ -87,7 +87,7 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="assistant-message rounded-2xl bg-base-100/60 p-4">
+		<div class="assistant-message">
 			{#if editing}
 				<textarea class="textarea textarea-bordered w-full" bind:value={draft}></textarea>
 				<div class="mt-2 flex gap-2">
@@ -190,10 +190,16 @@
 		margin: 0.65rem 0;
 	}
 
-	:global(.markdown-body ul),
+	:global(.markdown-body ul) {
+		margin: 0.65rem 0;
+		padding-left: 1.25rem;
+		list-style-type: disc;
+	}
+
 	:global(.markdown-body ol) {
 		margin: 0.65rem 0;
 		padding-left: 1.25rem;
+		list-style-type: decimal;
 	}
 
 	:global(.markdown-body li + li) {

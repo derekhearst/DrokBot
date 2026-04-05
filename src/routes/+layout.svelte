@@ -149,8 +149,8 @@
 		<input id="app-drawer" type="checkbox" class="drawer-toggle" bind:checked={mobileSidebarOpen} />
 
 		<div class="drawer-content relative flex h-screen flex-col overflow-hidden">
-			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 sm:gap-4 sm:p-4 xl:p-6 {showAside ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}">
-				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 sm:rounded-3xl sm:border sm:border-base-300 sm:bg-base-100/85 sm:p-4 sm:shadow-sm xl:p-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
+			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 lg:gap-4 lg:p-4 xl:p-6 {showAside ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}">
+				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 lg:rounded-3xl lg:border lg:border-base-300 lg:bg-base-100/85 lg:p-4 lg:shadow-sm xl:p-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
 					{@render children()}
 				</main>
 
@@ -173,8 +173,8 @@
 				{/if}
 			</div>
 
-			<!-- Bottom nav spacer on mobile -->
-			<div class="h-14 shrink-0 xl:hidden"></div>
+			<!-- Bottom nav spacer on mobile (accounts for safe-area on notched devices) -->
+			<div class="shrink-0 xl:hidden" style="height: calc(3.5rem + env(safe-area-inset-bottom, 0px))"></div>
 		</div>
 
 		<div class="drawer-side z-30">

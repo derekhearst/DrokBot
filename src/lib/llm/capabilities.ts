@@ -100,30 +100,50 @@ const detectionPatterns: Record<Exclude<CapabilityGroup, 'core'>, RegExp[]> = {
 	],
 }
 
+export type CapabilityOverride = 'auto' | 'always' | 'off'
+
 /**
  * Detects which capability groups should be activated for the current message.
  *
  * Sources:
- *  1. Keyword heuristics on the current user message
- *  2. Previously-used tool groups from conversation history (sticky activation)
+ *  1. User overrides from settings (always/off skip detection)
+ *  2. Keyword heuristics on the current user message
+ *  3. Previously-used tool groups from conversation history (sticky activation)
  *
  * Core is always included. Returns a deduplicated sorted list.
  */
-export function detectCapabilities(userMessage: string, previousToolNames?: string[]): CapabilityGroup[] {
+export function detectCapabilities(
+	userMessage: string,
+	previousToolNames?: string[],
+	overrides?: Record<string, CapabilityOverride>,
+): CapabilityGroup[] {
 	const active = new Set<CapabilityGroup>(['core'])
 
-	// 1. Keyword matching against current message
-	for (const [group, patterns] of Object.entries(detectionPatterns)) {
-		if (patterns.some((p) => p.test(userMessage))) {
-			active.add(group as CapabilityGroup)
+	const allGroups = Object.keys(capabilityGroups) as CapabilityGroup[]
+
+	for (const group of allGroups) {
+		const override = overrides?.[group]
+
+		if (override === 'off') continue
+		if (override === 'always') {
+			active.add(group)
+			continue
+		}
+
+		// 'auto' or no override — use heuristics
+		if (group !== 'core' && group in detectionPatterns) {
+			const patterns = detectionPatterns[group as keyof typeof detectionPatterns]
+			if (patterns.some((p) => p.test(userMessage))) {
+				active.add(group)
+			}
 		}
 	}
 
-	// 2. Sticky: if the conversation previously used tools from a group, keep it active
+	// Sticky: if the conversation previously used tools from a group, keep it active
 	if (previousToolNames) {
 		for (const name of previousToolNames) {
 			const group = toolToGroup[name]
-			if (group) active.add(group)
+			if (group && overrides?.[group] !== 'off') active.add(group)
 		}
 	}
 

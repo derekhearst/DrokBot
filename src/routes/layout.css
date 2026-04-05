@@ -98,8 +98,8 @@ body::after {
 	view-transition-name: chat-composer-shell;
 }
 
-/* Mobile: chat and home pages go truly edge-to-edge */
-@media (max-width: 639px) {
+/* Below lg: chat and home pages go truly edge-to-edge */
+@media (max-width: 1023px) {
 	.mobile-chat-main {
 		padding: 0 !important;
 		border: none !important;

@@ -35,9 +35,10 @@ export const appSettings = pgTable('app_settings', {
 			reservedResponsePct: number
 			autoCompactThresholdPct: number
 			compactionModel: string
+			capabilityOverrides: Record<string, 'auto' | 'always' | 'off'>
 		}>()
 		.notNull()
-		.default({ reservedResponsePct: 30, autoCompactThresholdPct: 72, compactionModel: 'openai/gpt-4o-mini' }),
+		.default({ reservedResponsePct: 30, autoCompactThresholdPct: 72, compactionModel: 'openai/gpt-4o-mini', capabilityOverrides: {} }),
 	toolConfig: jsonb('tool_config')
 		.$type<{
 			approvalMode: 'auto' | 'confirm'

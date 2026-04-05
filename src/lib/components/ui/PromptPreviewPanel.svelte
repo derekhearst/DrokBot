@@ -7,6 +7,7 @@
 	let preview = $state<PromptPreview | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let activeTab = $state<'simple' | 'complex'>('simple');
 
 	onMount(() => {
 		void load();
@@ -28,6 +29,8 @@
 		if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
 		return String(n);
 	}
+
+	let scenario = $derived(preview ? preview.scenarios[activeTab] : null);
 </script>
 
 <div class="flex h-full flex-col">
@@ -53,80 +56,32 @@
 		<div class="flex flex-1 items-center justify-center">
 			<span class="loading loading-spinner loading-md text-base-content/30"></span>
 		</div>
-	{:else if preview}
+	{:else if preview && scenario}
 		<div class="flex-1 space-y-3 overflow-y-auto">
+			<!-- Scenario Tabs -->
+			<div class="tabs tabs-boxed tabs-xs bg-base-200/50">
+				<button class="tab" class:tab-active={activeTab === 'simple'} onclick={() => activeTab = 'simple'}>Simple</button>
+				<button class="tab" class:tab-active={activeTab === 'complex'} onclick={() => activeTab = 'complex'}>Complex</button>
+			</div>
+
 			<!-- Meta -->
 			<div class="flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-base-200/50 px-2.5 py-2 text-[10px] text-base-content/50">
 				<span>Model: <span class="font-mono text-base-content/70">{preview.model}</span></span>
-				<span>Approval: <span class="font-mono text-base-content/70">{preview.toolApprovalMode}</span></span>
+				<span>Tools: <span class="font-mono text-base-content/70">{scenario.toolCount}</span></span>
+				<span>~<span class="font-mono text-base-content/70">{formatTokens(scenario.estimatedTokens)}</span> tokens</span>
+				<span>Groups: <span class="font-mono text-base-content/70">{scenario.capabilities.join(', ')}</span></span>
 			</div>
 
-			<!-- Scenario comparison -->
-			<div class="rounded-lg bg-base-200/50 px-2.5 py-2">
-				<p class="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Context by scenario</p>
-				<div class="grid grid-cols-2 gap-2 text-[10px]">
-					<div class="rounded-md bg-success/10 px-2 py-1.5">
-						<p class="font-semibold text-success">Simple query</p>
-						<p class="font-mono text-base-content/60">~{formatTokens(preview.scenarios.minimal.tokens)} tokens</p>
-						<p class="text-base-content/40">{preview.scenarios.minimal.toolCount} tools</p>
-					</div>
-					<div class="rounded-md bg-warning/10 px-2 py-1.5">
-						<p class="font-semibold text-warning">Full capability</p>
-						<p class="font-mono text-base-content/60">~{formatTokens(preview.scenarios.full.tokens)} tokens</p>
-						<p class="text-base-content/40">{preview.scenarios.full.toolCount} tools</p>
-					</div>
-				</div>
-			</div>
-
-			<!-- Capability Groups -->
-			<div>
-				<p class="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
-					<span class="inline-block h-1 w-1 rounded-full bg-primary"></span>
-					Capability Groups
-				</p>
-				<div class="space-y-1">
-					{#each preview.capabilityGroups as group}
-						<div class="flex items-center justify-between rounded-md bg-base-200/50 px-2 py-1">
-							<div class="flex items-center gap-1.5">
-								{#if group.alwaysOn}
-									<span class="badge badge-xs badge-success">on</span>
-								{:else}
-									<span class="badge badge-xs badge-ghost">auto</span>
-								{/if}
-								<span class="text-[10px] font-medium text-base-content/70">{group.label}</span>
-							</div>
-							<span class="text-[9px] font-mono text-base-content/40">{group.toolCount} tools</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-
-			<!-- System Messages -->
-			{#each preview.systemMessages as msg}
+			<!-- Raw message parts -->
+			{#each scenario.parts as part}
 				<div>
 					<p class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
 						<span class="inline-block h-1 w-1 rounded-full bg-secondary"></span>
-						{msg.label}
-						<span class="ml-auto font-mono text-[9px] font-normal text-base-content/30">~{formatTokens(msg.tokens)} tok</span>
+						{part.label}
 					</p>
-					<pre class="whitespace-pre-wrap rounded-lg bg-base-200/50 p-2 font-mono text-[10px] leading-relaxed text-base-content/70">{msg.content}</pre>
+					<pre class="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200/50 p-2 font-mono text-[10px] leading-relaxed text-base-content/70">{part.content}</pre>
 				</div>
 			{/each}
-
-			<!-- Tool Definitions -->
-			<div>
-				<p class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
-					<span class="inline-block h-1 w-1 rounded-full bg-accent"></span>
-					Tools ({preview.tools.length})
-				</p>
-				<details class="group">
-					<summary class="cursor-pointer rounded-lg bg-base-200/50 px-2.5 py-1.5 text-[10px] font-medium text-base-content/50 select-none hover:bg-base-200/70">
-						Expand tool schemas
-						<svg class="ml-0.5 inline-block h-2.5 w-2.5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7" /></svg>
-					</summary>
-					<pre class="mt-1.5 max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg bg-base-200/50 p-2 font-mono text-[9px] leading-relaxed text-base-content/60">{JSON.stringify(preview.tools, null, 2)}</pre>
-				</details>
-			</div>
 		</div>
 	{/if}
 </div>

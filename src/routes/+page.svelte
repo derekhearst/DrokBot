@@ -92,6 +92,39 @@
 		return [...dateMap.values()].sort((a, b) => b.timestamp - a.timestamp);
 	});
 
+	let trayDragY = $state(0);
+	let trayDragging = $state(false);
+	let trayStartY = 0;
+	let trayScrollEl: HTMLDivElement | undefined = $state(undefined);
+
+	function onTrayTouchStart(e: TouchEvent) {
+		if (trayScrollEl && trayScrollEl.scrollTop > 0) return;
+		trayStartY = e.touches[0].clientY;
+		trayDragging = false;
+		trayDragY = 0;
+	}
+
+	function onTrayTouchMove(e: TouchEvent) {
+		const currentY = e.touches[0].clientY;
+		const delta = currentY - trayStartY;
+		if (delta > 0 && trayScrollEl && trayScrollEl.scrollTop <= 0) {
+			trayDragging = true;
+			trayDragY = delta;
+			e.preventDefault();
+		} else if (!trayDragging) {
+			return;
+		}
+	}
+
+	function onTrayTouchEnd() {
+		if (trayDragging && trayDragY > 100) {
+			expanded = false;
+			search = '';
+		}
+		trayDragY = 0;
+		trayDragging = false;
+	}
+
 	async function handleNewChat(initialPrompt?: string) {
 		if (busy) return;
 		busy = true;
@@ -183,9 +216,14 @@
 	></button>
 
 	<!-- Tray panel -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl sm:rounded-t-3xl xl:pb-0 lg:hidden"
+		style="transform: translateY({trayDragging && trayDragY > 0 ? trayDragY + 'px' : '0'}); transition: {trayDragging ? 'none' : 'transform 200ms ease-out'};"
 		transition:fly={{ y: 400, duration: 380, easing: cubicOut }}
+		ontouchstart={onTrayTouchStart}
+		ontouchmove={onTrayTouchMove}
+		ontouchend={onTrayTouchEnd}
 	>
 		<!-- Drag handle -->
 		<div class="flex shrink-0 justify-center pb-1 pt-3">
@@ -195,16 +233,6 @@
 		<!-- Header -->
 		<div class="shrink-0 space-y-3 px-4 pb-3">
 			<div class="flex items-center gap-3">
-				<button
-					type="button"
-					class="btn btn-sm btn-primary gap-1.5 rounded-xl"
-					onclick={async () => { expanded = false; search = ''; await tick(); document.querySelector<HTMLTextAreaElement>('.chat-composer-transition textarea')?.focus(); }}
-				>
-					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-					</svg>
-					New chat
-				</button>
 				<h2 class="flex-1 text-lg font-semibold">All chats</h2>
 				<div class="join" role="group" aria-label="Group chats">
 					<button
@@ -228,7 +256,7 @@
 		</div>
 
 		<!-- Scrollable list -->
-		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+		<div bind:this={trayScrollEl} class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-none px-4 pb-6">
 			{#if filtered.length === 0}
 				<p class="py-6 text-center text-sm text-base-content/40">
 					{search ? 'No matches' : 'No conversations yet'}

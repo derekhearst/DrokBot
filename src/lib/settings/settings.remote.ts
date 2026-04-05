@@ -1,12 +1,13 @@
 import { command, query } from '$app/server'
 import { z } from 'zod'
 import { getOrCreateSettings, resetSettings, updateSettings } from '$lib/settings/settings'
-import { getToolDefinitions, type ToolName } from '$lib/llm/tools'
+import { getToolDefinitions } from '$lib/llm/tools'
 import { listSkillSummaries } from '$lib/skills/store'
 import { assembleContext } from '$lib/memory/context'
 import {
 	capabilityGroups,
 	type CapabilityGroup,
+	detectCapabilities,
 	getActiveTools,
 	buildCapabilityPrompt,
 	estimateTokens,
@@ -48,6 +49,7 @@ const settingsUpdateSchema = z.object({
 			reservedResponsePct: z.number().min(10).max(40).optional(),
 			autoCompactThresholdPct: z.number().min(40).max(95).optional(),
 			compactionModel: z.string().trim().min(1).max(120).optional(),
+			capabilityOverrides: z.record(z.string(), z.enum(['auto', 'always', 'off'])).optional(),
 		})
 		.optional(),
 	toolConfig: z
@@ -73,18 +75,19 @@ export const resetAppSettings = command(async () => {
 export const getFullPromptPreview = query(async () => {
 	const settings = await getOrCreateSettings()
 
-	// --- Capability groups overview ---
-	const allGroups = Object.entries(capabilityGroups) as [CapabilityGroup, (typeof capabilityGroups)[CapabilityGroup]][]
-	const capabilityOverview = allGroups.map(([key, group]) => ({
-		key,
-		label: group.label,
-		description: group.description,
-		alwaysOn: group.alwaysOn,
-		toolCount: group.tools.length,
-		tools: [...group.tools],
-	}))
+	const contextConfig = settings.contextConfig as {
+		capabilityOverrides?: Record<string, 'auto' | 'always' | 'off'>
+	}
+	const overrides = contextConfig?.capabilityOverrides ?? {}
 
-	// --- Build two scenarios: minimal (core only) vs full (all groups active) ---
+	// Simulate a "simple query" and a "complex query" to show both scenarios
+	const simpleMessage = 'Hello, how are you?'
+	const complexMessage = 'Write a Python script that generates a chart and save it as an artifact'
+
+	const simpleCapabilities = detectCapabilities(simpleMessage, [], overrides)
+	const complexCapabilities = detectCapabilities(complexMessage, [], overrides)
+
+	// Skill summaries
 	const skillSummaries = await listSkillSummaries()
 	const skillList =
 		skillSummaries.length > 0
@@ -96,61 +99,46 @@ export const getFullPromptPreview = query(async () => {
 					.join('\n')
 			: undefined
 
+	// Memory context sample
 	const memoryContext = await assembleContext('sample conversation')
 	const memoryPrompt = memoryContext.memories.length > 0 ? memoryContext.systemPrompt : undefined
 
-	// Minimal scenario: only core tools, basic system prompt
-	const minimalCapabilities: CapabilityGroup[] = ['core']
-	const minimalSystemPrompt = buildCapabilityPrompt(minimalCapabilities, {
-		customSystemPrompt: settings.systemPrompt || undefined,
-	})
-	const minimalToolNames = getActiveTools(minimalCapabilities)
-	const minimalTools = getToolDefinitions(minimalToolNames)
-	const minimalTokens = estimateTokens(minimalSystemPrompt) + estimateToolDefinitionTokens(minimalTools)
-
-	// Full scenario: all groups active + memory + skills
-	const fullCapabilities = Object.keys(capabilityGroups) as CapabilityGroup[]
-	const fullSystemPrompt = buildCapabilityPrompt(fullCapabilities, {
-		customSystemPrompt: settings.systemPrompt || undefined,
-		skillSummaries: skillList,
-	})
-	const fullToolNames = getActiveTools(fullCapabilities)
-	const fullTools = getToolDefinitions(fullToolNames)
-	const fullTokens =
-		estimateTokens(fullSystemPrompt) +
-		estimateToolDefinitionTokens(fullTools) +
-		(memoryPrompt ? estimateTokens(memoryPrompt) : 0)
-
-	// --- Legacy-compatible systemMessages for display ---
-	const systemMessages: Array<{ label: string; content: string; tokens: number }> = []
-
-	const capPrompt = buildCapabilityPrompt(fullCapabilities, {
-		customSystemPrompt: settings.systemPrompt || undefined,
-		skillSummaries: skillList,
-	})
-	systemMessages.push({
-		label: 'System Prompt (with all capabilities)',
-		content: capPrompt,
-		tokens: estimateTokens(capPrompt),
-	})
-
-	if (memoryPrompt) {
-		systemMessages.push({
-			label: 'Memory Context (sample)',
-			content: memoryPrompt,
-			tokens: estimateTokens(memoryPrompt),
+	function buildScenario(label: string, capabilities: CapabilityGroup[]) {
+		const systemPrompt = buildCapabilityPrompt(capabilities, {
+			customSystemPrompt: settings.systemPrompt || undefined,
+			skillSummaries: capabilities.includes('skills') ? skillList : undefined,
 		})
+		const toolNames = getActiveTools(capabilities)
+		const tools = getToolDefinitions(toolNames)
+		const toolsJson = JSON.stringify(tools, null, 2)
+
+		const rawParts: Array<{ label: string; content: string }> = []
+		rawParts.push({ label: 'System Message', content: systemPrompt })
+		if (memoryPrompt) {
+			rawParts.push({ label: 'Memory Context', content: memoryPrompt })
+		}
+		rawParts.push({ label: `Tools (${tools.length})`, content: toolsJson })
+
+		const totalChars = systemPrompt.length + (memoryPrompt?.length ?? 0) + toolsJson.length
+		const estimatedTokens = estimateTokens(systemPrompt) + estimateToolDefinitionTokens(tools)
+			+ (memoryPrompt ? estimateTokens(memoryPrompt) : 0)
+
+		return {
+			label,
+			capabilities: [...capabilities],
+			toolCount: tools.length,
+			estimatedTokens,
+			totalChars,
+			parts: rawParts,
+		}
 	}
 
 	return {
-		systemMessages,
-		tools: fullTools,
 		model: settings.defaultModel,
 		toolApprovalMode: (settings.toolConfig as { approvalMode?: string } | undefined)?.approvalMode ?? 'auto',
-		capabilityGroups: capabilityOverview,
 		scenarios: {
-			minimal: { tokens: minimalTokens, toolCount: minimalToolNames.length },
-			full: { tokens: fullTokens, toolCount: fullToolNames.length },
+			simple: buildScenario('Simple Query', simpleCapabilities),
+			complex: buildScenario('Complex Query', complexCapabilities),
 		},
 	}
 })
