@@ -23,11 +23,16 @@
 			loading = false;
 		}
 	}
+
+	function formatTokens(n: number): string {
+		if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+		return String(n);
+	}
 </script>
 
 <div class="flex h-full flex-col">
 	<div class="flex items-center justify-between px-1 pb-3">
-		<h2 class="text-sm font-bold tracking-tight">Full Prompt</h2>
+		<h2 class="text-sm font-bold tracking-tight">Context Explorer</h2>
 		<button class="btn btn-ghost btn-xs btn-circle" type="button" onclick={load} disabled={loading} aria-label="Refresh">
 			{#if loading}
 				<span class="loading loading-spinner loading-xs"></span>
@@ -53,8 +58,47 @@
 			<!-- Meta -->
 			<div class="flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-base-200/50 px-2.5 py-2 text-[10px] text-base-content/50">
 				<span>Model: <span class="font-mono text-base-content/70">{preview.model}</span></span>
-				<span>Tools: <span class="font-mono text-base-content/70">{preview.tools.length}</span></span>
 				<span>Approval: <span class="font-mono text-base-content/70">{preview.toolApprovalMode}</span></span>
+			</div>
+
+			<!-- Scenario comparison -->
+			<div class="rounded-lg bg-base-200/50 px-2.5 py-2">
+				<p class="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Context by scenario</p>
+				<div class="grid grid-cols-2 gap-2 text-[10px]">
+					<div class="rounded-md bg-success/10 px-2 py-1.5">
+						<p class="font-semibold text-success">Simple query</p>
+						<p class="font-mono text-base-content/60">~{formatTokens(preview.scenarios.minimal.tokens)} tokens</p>
+						<p class="text-base-content/40">{preview.scenarios.minimal.toolCount} tools</p>
+					</div>
+					<div class="rounded-md bg-warning/10 px-2 py-1.5">
+						<p class="font-semibold text-warning">Full capability</p>
+						<p class="font-mono text-base-content/60">~{formatTokens(preview.scenarios.full.tokens)} tokens</p>
+						<p class="text-base-content/40">{preview.scenarios.full.toolCount} tools</p>
+					</div>
+				</div>
+			</div>
+
+			<!-- Capability Groups -->
+			<div>
+				<p class="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+					<span class="inline-block h-1 w-1 rounded-full bg-primary"></span>
+					Capability Groups
+				</p>
+				<div class="space-y-1">
+					{#each preview.capabilityGroups as group}
+						<div class="flex items-center justify-between rounded-md bg-base-200/50 px-2 py-1">
+							<div class="flex items-center gap-1.5">
+								{#if group.alwaysOn}
+									<span class="badge badge-xs badge-success">on</span>
+								{:else}
+									<span class="badge badge-xs badge-ghost">auto</span>
+								{/if}
+								<span class="text-[10px] font-medium text-base-content/70">{group.label}</span>
+							</div>
+							<span class="text-[9px] font-mono text-base-content/40">{group.toolCount} tools</span>
+						</div>
+					{/each}
+				</div>
 			</div>
 
 			<!-- System Messages -->
@@ -63,6 +107,7 @@
 					<p class="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
 						<span class="inline-block h-1 w-1 rounded-full bg-secondary"></span>
 						{msg.label}
+						<span class="ml-auto font-mono text-[9px] font-normal text-base-content/30">~{formatTokens(msg.tokens)} tok</span>
 					</p>
 					<pre class="whitespace-pre-wrap rounded-lg bg-base-200/50 p-2 font-mono text-[10px] leading-relaxed text-base-content/70">{msg.content}</pre>
 				</div>

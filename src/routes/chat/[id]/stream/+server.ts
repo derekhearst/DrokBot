@@ -5,7 +5,7 @@ import { conversations, messages } from '$lib/chat/chat.schema'
 import { streamChat, type LlmMessage } from '$lib/llm/openrouter'
 import { routeModel } from '$lib/llm/router'
 import { extractAndPersist } from '$lib/memory/extract'
-import { assembleContext } from '$lib/memory/context'
+import { assembleContext, shouldFetchMemory } from '$lib/memory/context'
 import { bumpAccessCount } from '$lib/memory/store'
 import { generateTitle } from '$lib/chat/titlegen'
 import { emitActivity } from '$lib/activity/emit'
@@ -14,6 +14,14 @@ import { logLlmUsage } from '$lib/llm/usage'
 import { getOrCreateSettings } from '$lib/settings/settings'
 import { requestApproval } from '$lib/llm/tool-approval'
 import { listSkillSummaries } from '$lib/skills/store'
+import {
+	detectCapabilities,
+	getActiveTools,
+	buildCapabilityPrompt,
+	getGroupForTool,
+	type CapabilityGroup,
+} from '$lib/llm/capabilities'
+import { shouldCompact, compactMessages, trimHistoricalToolResults, trimToolResult } from '$lib/llm/compaction'
 
 const encoder = new TextEncoder()
 
@@ -113,44 +121,80 @@ export const POST: RequestHandler = async ({ request }) => {
 			return { role: row.role, content: row.content }
 		})
 
-	const memoryContext = await assembleContext(body.content ?? conversation.title)
-	if (memoryContext.memories.length > 0) {
-		llmMessages.unshift({
-			role: 'system',
-			content: memoryContext.systemPrompt,
-		})
-		await Promise.all(memoryContext.memories.map((memory) => bumpAccessCount(memory.id)))
+	// --- Context Engineering: Capability Detection ---
+	// Gather tool names used in previous messages for sticky activation
+	const previousToolNames: string[] = []
+	for (const row of historyRows) {
+		// toolCalls is stored as JSON array on assistant messages
+		const rawRow = row as Record<string, unknown>
+		const toolCalls = rawRow.toolCalls as Array<{ name?: string }> | undefined
+		if (toolCalls) {
+			for (const tc of toolCalls) {
+				if (tc.name) previousToolNames.push(tc.name)
+			}
+		}
 	}
 
-	// Artifact creation guidance
-	llmMessages.unshift({
-		role: 'system',
-		content: `You have access to tools including artifact_create, artifact_update, and artifact_storage_update. Use artifact_create to produce persistent, versioned artifacts for:
-- Code snippets longer than ~15 lines
-- Full documents, READMEs, guides, or reports
-- Configuration files (YAML, JSON, TOML, etc.)
-- HTML pages or SVG graphics
-- Mermaid diagrams
-- Data tables (as JSON arrays)
-- Svelte components
+	const userContent = body.content?.trim() ?? ''
+	const activeCapabilities = detectCapabilities(userContent, previousToolNames)
 
-For short answers, explanations, and conversational responses, reply with inline text as normal. When creating artifacts, always set an appropriate type and descriptive title.`,
+	// --- Context Engineering: Conditional Memory ---
+	const fetchMemory = shouldFetchMemory(userContent)
+	if (fetchMemory) {
+		const memoryLimit = isFirstExchange ? 8 : 6
+		const memoryContext = await assembleContext(body.content ?? conversation.title, { limit: memoryLimit })
+		if (memoryContext.memories.length > 0) {
+			llmMessages.unshift({
+				role: 'system',
+				content: memoryContext.systemPrompt,
+			})
+			await Promise.all(memoryContext.memories.map((memory) => bumpAccessCount(memory.id)))
+		}
+	}
+
+	// --- Context Engineering: Unified System Prompt ---
+	const currentSettings = await getOrCreateSettings()
+
+	// Build skill summaries only if skills capability is active
+	let skillSummariesText: string | undefined
+	if (activeCapabilities.includes('skills')) {
+		const skillSummaries = await listSkillSummaries()
+		if (skillSummaries.length > 0) {
+			skillSummariesText = skillSummaries
+				.map((s) => {
+					const fileNames = s.files.map((f) => f.name).join(', ')
+					return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
+				})
+				.join('\n')
+		}
+	}
+
+	const capabilityPrompt = buildCapabilityPrompt(activeCapabilities, {
+		customSystemPrompt: currentSettings.systemPrompt || undefined,
+		skillSummaries: skillSummariesText,
 	})
 
-	// Skills awareness
-	const skillSummaries = await listSkillSummaries()
-	if (skillSummaries.length > 0) {
-		const skillList = skillSummaries
-			.map((s) => {
-				const fileNames = s.files.map((f) => f.name).join(', ')
-				return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
-			})
-			.join('\n')
+	if (capabilityPrompt) {
 		llmMessages.unshift({
 			role: 'system',
-			content: `Available skills (use read_skill tool to load full content when relevant):\n${skillList}`,
+			content: capabilityPrompt,
 		})
 	}
+
+	// --- Context Engineering: Conversation Compaction ---
+	const compactionCheck = await shouldCompact(llmMessages, routedModel)
+	let didCompact = false
+	if (compactionCheck.needed) {
+		const result = await compactMessages(llmMessages)
+		if (result.summary) {
+			llmMessages.length = 0
+			llmMessages.push(...result.compacted)
+			didCompact = true
+		}
+	}
+
+	// --- Context Engineering: Trim Historical Tool Results ---
+	const trimmedMessages = trimHistoricalToolResults(llmMessages)
 
 	const startedAt = Date.now()
 	let firstTokenAt: number | null = null
@@ -158,16 +202,23 @@ For short answers, explanations, and conversational responses, reply with inline
 	let promptTokens = 0
 	let completionTokens = 0
 
-	const tools = getToolDefinitions()
+	// --- Context Engineering: Selective Tool Loading ---
+	const activeToolNames = getActiveTools(activeCapabilities)
+	let tools = getToolDefinitions(activeToolNames)
+	let escalatedOnce = false
 	const MAX_TOOL_ROUNDS = 3
 
-	const currentSettings = await getOrCreateSettings()
 	const toolApprovalMode = (currentSettings.toolConfig as { approvalMode?: string } | undefined)?.approvalMode ?? 'auto'
 
 	const readable = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			try {
-				let currentMessages = [...llmMessages]
+				// Notify client if compaction occurred
+				if (didCompact) {
+					controller.enqueue(sse('compaction', { tokensBefore: compactionCheck.tokenEstimate }))
+				}
+
+				let currentMessages = [...trimmedMessages]
 				const allToolCalls: Array<Record<string, unknown>> = []
 
 				for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
@@ -229,6 +280,39 @@ For short answers, explanations, and conversational responses, reply with inline
 						break
 					}
 
+					// --- Capability Escalation ---
+					// If the LLM tries to call a tool not in the active set, expand capabilities and retry
+					if (!escalatedOnce) {
+						const unknownTools = validToolCalls.filter((tc) => !activeToolNames.includes(tc.name as ToolName))
+						if (unknownTools.length > 0) {
+							const newGroups = new Set<CapabilityGroup>()
+							for (const tc of unknownTools) {
+								const group = getGroupForTool(tc.name)
+								if (group) newGroups.add(group)
+							}
+							if (newGroups.size > 0) {
+								for (const g of newGroups) {
+									if (!activeCapabilities.includes(g)) activeCapabilities.push(g)
+								}
+								const expandedToolNames = getActiveTools(activeCapabilities)
+								tools = getToolDefinitions(expandedToolNames)
+								activeToolNames.push(...expandedToolNames.filter((t) => !activeToolNames.includes(t)))
+								escalatedOnce = true
+								controller.enqueue(
+									sse('capability_escalation', {
+										expanded: [...newGroups],
+									}),
+								)
+								// Re-stream this round with expanded tools
+								currentMessages.push({
+									role: 'assistant',
+									content: assistantContent || '',
+								})
+								continue
+							}
+						}
+					}
+
 					// Execute each tool call
 					const toolResults: Array<{ call_id: string; name: string; result: string }> = []
 					for (const tc of validToolCalls) {
@@ -286,7 +370,8 @@ For short answers, explanations, and conversational responses, reply with inline
 
 						const toolResult = await executeTool(toolCall)
 
-						const resultStr = toolResult.success ? JSON.stringify(toolResult.result) : `Error: ${toolResult.error}`
+						const rawResultStr = toolResult.success ? JSON.stringify(toolResult.result) : `Error: ${toolResult.error}`
+						const resultStr = trimToolResult(tc.name, rawResultStr)
 
 						toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
 

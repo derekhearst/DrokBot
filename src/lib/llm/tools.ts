@@ -97,6 +97,8 @@ export const toolSchemas = {
 
 export type ToolName = keyof typeof toolSchemas
 
+export const allToolNames = Object.keys(toolSchemas) as ToolName[]
+
 const toolDescriptions: Record<ToolName, string> = {
 	web_search: 'Search the web for information.',
 	code_execute: 'Execute code in a sandboxed environment.',
@@ -132,8 +134,17 @@ function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
 	return z.toJSONSchema(schema) as Record<string, unknown>
 }
 
-export function getToolDefinitions() {
-	return Object.entries(toolSchemas).map(([name, schema]) => ({
+/**
+ * Returns tool definitions for the LLM.
+ * When `onlyTools` is provided, only those tools are included (capability filtering).
+ * When omitted, all tools are returned (backwards compatible).
+ */
+export function getToolDefinitions(onlyTools?: ToolName[]) {
+	const entries = onlyTools
+		? Object.entries(toolSchemas).filter(([name]) => onlyTools.includes(name as ToolName))
+		: Object.entries(toolSchemas)
+
+	return entries.map(([name, schema]) => ({
 		type: 'function' as const,
 		function: {
 			name,

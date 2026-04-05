@@ -1,9 +1,17 @@
 import { command, query } from '$app/server'
 import { z } from 'zod'
 import { getOrCreateSettings, resetSettings, updateSettings } from '$lib/settings/settings'
-import { getToolDefinitions } from '$lib/llm/tools'
+import { getToolDefinitions, type ToolName } from '$lib/llm/tools'
 import { listSkillSummaries } from '$lib/skills/store'
 import { assembleContext } from '$lib/memory/context'
+import {
+	capabilityGroups,
+	type CapabilityGroup,
+	getActiveTools,
+	buildCapabilityPrompt,
+	estimateTokens,
+	estimateToolDefinitionTokens,
+} from '$lib/llm/capabilities'
 
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),
@@ -64,54 +72,84 @@ export const resetAppSettings = command(async () => {
 export const getFullPromptPreview = query(async () => {
 	const settings = await getOrCreateSettings()
 
-	const systemMessages: Array<{ label: string; content: string }> = []
+	// --- Capability groups overview ---
+	const allGroups = Object.entries(capabilityGroups) as [CapabilityGroup, (typeof capabilityGroups)[CapabilityGroup]][]
+	const capabilityOverview = allGroups.map(([key, group]) => ({
+		key,
+		label: group.label,
+		description: group.description,
+		alwaysOn: group.alwaysOn,
+		toolCount: group.tools.length,
+		tools: [...group.tools],
+	}))
 
-	// Skills awareness (prepended first, so appears at top)
+	// --- Build two scenarios: minimal (core only) vs full (all groups active) ---
 	const skillSummaries = await listSkillSummaries()
-	if (skillSummaries.length > 0) {
-		const skillList = skillSummaries
-			.map((s) => {
-				const fileNames = s.files.map((f: { name: string }) => f.name).join(', ')
-				return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
-			})
-			.join('\n')
+	const skillList =
+		skillSummaries.length > 0
+			? skillSummaries
+					.map((s) => {
+						const fileNames = s.files.map((f: { name: string }) => f.name).join(', ')
+						return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
+					})
+					.join('\n')
+			: undefined
+
+	const memoryContext = await assembleContext('sample conversation')
+	const memoryPrompt = memoryContext.memories.length > 0 ? memoryContext.systemPrompt : undefined
+
+	// Minimal scenario: only core tools, basic system prompt
+	const minimalCapabilities: CapabilityGroup[] = ['core']
+	const minimalSystemPrompt = buildCapabilityPrompt(minimalCapabilities, {
+		customSystemPrompt: settings.systemPrompt || undefined,
+	})
+	const minimalToolNames = getActiveTools(minimalCapabilities)
+	const minimalTools = getToolDefinitions(minimalToolNames)
+	const minimalTokens = estimateTokens(minimalSystemPrompt) + estimateToolDefinitionTokens(minimalTools)
+
+	// Full scenario: all groups active + memory + skills
+	const fullCapabilities = Object.keys(capabilityGroups) as CapabilityGroup[]
+	const fullSystemPrompt = buildCapabilityPrompt(fullCapabilities, {
+		customSystemPrompt: settings.systemPrompt || undefined,
+		skillSummaries: skillList,
+	})
+	const fullToolNames = getActiveTools(fullCapabilities)
+	const fullTools = getToolDefinitions(fullToolNames)
+	const fullTokens =
+		estimateTokens(fullSystemPrompt) +
+		estimateToolDefinitionTokens(fullTools) +
+		(memoryPrompt ? estimateTokens(memoryPrompt) : 0)
+
+	// --- Legacy-compatible systemMessages for display ---
+	const systemMessages: Array<{ label: string; content: string; tokens: number }> = []
+
+	const capPrompt = buildCapabilityPrompt(fullCapabilities, {
+		customSystemPrompt: settings.systemPrompt || undefined,
+		skillSummaries: skillList,
+	})
+	systemMessages.push({
+		label: 'System Prompt (with all capabilities)',
+		content: capPrompt,
+		tokens: estimateTokens(capPrompt),
+	})
+
+	if (memoryPrompt) {
 		systemMessages.push({
-			label: 'Skills Awareness',
-			content: `Available skills (use read_skill tool to load full content when relevant):\n${skillList}`,
+			label: 'Memory Context (sample)',
+			content: memoryPrompt,
+			tokens: estimateTokens(memoryPrompt),
 		})
 	}
 
-	// Artifact creation guidance
-	const artifactGuidance = `You have access to tools including artifact_create, artifact_update, and artifact_storage_update. Use artifact_create to produce persistent, versioned artifacts for:
-- Code snippets longer than ~15 lines
-- Full documents, READMEs, guides, or reports
-- Configuration files (YAML, JSON, TOML, etc.)
-- HTML pages or SVG graphics
-- Mermaid diagrams
-- Data tables (as JSON arrays)
-- Svelte components
-
-For short answers, explanations, and conversational responses, reply with inline text as normal. When creating artifacts, always set an appropriate type and descriptive title.`
-	systemMessages.push({ label: 'Artifact Guidance', content: artifactGuidance })
-
-	// Custom system prompt
-	if (settings.systemPrompt) {
-		systemMessages.push({ label: 'Custom System Prompt', content: settings.systemPrompt })
-	}
-
-	// Memory context (sample)
-	const memoryContext = await assembleContext('sample conversation')
-	if (memoryContext.memories.length > 0) {
-		systemMessages.push({ label: 'Memory Context (sample)', content: memoryContext.systemPrompt })
-	}
-
-	// Tool definitions
-	const tools = getToolDefinitions()
-
 	return {
 		systemMessages,
-		tools,
+		tools: fullTools,
 		model: settings.defaultModel,
 		toolApprovalMode: (settings.toolConfig as { approvalMode?: string } | undefined)?.approvalMode ?? 'auto',
+		capabilityGroups: capabilityOverview,
+		scenarios: {
+			minimal: { tokens: minimalTokens, toolCount: minimalToolNames.length },
+			full: { tokens: fullTokens, toolCount: fullToolNames.length },
+		},
 	}
 })
