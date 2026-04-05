@@ -1,7 +1,7 @@
 import { getModelForTier } from '$lib/llm/openrouter'
 import { getOrCreateSettings } from '$lib/settings/settings'
 import { db } from '$lib/db.server'
-import { messages } from '$lib/chat/chat.schema'
+import { llmUsage } from '$lib/llm/usage.schema'
 import { sql, gte } from 'drizzle-orm'
 
 type RoutingContext = {
@@ -54,10 +54,10 @@ async function getSpendToday(): Promise<number> {
 
 	const [result] = await db
 		.select({
-			total: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)`,
+			total: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)`,
 		})
-		.from(messages)
-		.where(gte(messages.createdAt, startOfDay))
+		.from(llmUsage)
+		.where(gte(llmUsage.createdAt, startOfDay))
 
 	return parseFloat(result?.total ?? '0')
 }
@@ -69,10 +69,10 @@ async function getSpendThisMonth(): Promise<number> {
 
 	const [result] = await db
 		.select({
-			total: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)`,
+			total: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)`,
 		})
-		.from(messages)
-		.where(gte(messages.createdAt, startOfMonth))
+		.from(llmUsage)
+		.where(gte(llmUsage.createdAt, startOfMonth))
 
 	return parseFloat(result?.total ?? '0')
 }

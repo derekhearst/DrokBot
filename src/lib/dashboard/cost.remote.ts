@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { db } from '$lib/db.server'
 import { conversations, messages } from '$lib/chat/chat.schema'
 import { agentRuns } from '$lib/agents/agents.schema'
+import { llmUsage } from '$lib/llm/usage.schema'
 
 const costPeriodSchema = z.object({
 	period: z.enum(['day', 'week', 'month']).optional(),
@@ -25,31 +26,45 @@ export const getCostSummary = query(costPeriodSchema, async ({ period }) => {
 	const p = period ?? 'month'
 	const since = periodStart(p)
 
-	const [totalSpend, byModel, byConversation, dailyBreakdown] = await Promise.all([
-		// Total spend in period
+	const [totalSpend, byModel, bySource, byConversation, dailyBreakdown] = await Promise.all([
+		// Total spend in period (from llm_usage — all LLM calls)
 		db
 			.select({
-				total: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)::text`,
-				totalTokensIn: sql<number>`coalesce(sum(${messages.tokensIn}), 0)::int`,
-				totalTokensOut: sql<number>`coalesce(sum(${messages.tokensOut}), 0)::int`,
-				messageCount: sql<number>`count(*)::int`,
+				total: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text`,
+				totalTokensIn: sql<number>`coalesce(sum(${llmUsage.tokensIn}), 0)::int`,
+				totalTokensOut: sql<number>`coalesce(sum(${llmUsage.tokensOut}), 0)::int`,
+				callCount: sql<number>`count(*)::int`,
 			})
-			.from(messages)
-			.where(gte(messages.createdAt, since)),
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, since)),
 
-		// Cost by model
+		// Cost by model (from llm_usage)
 		db
 			.select({
-				model: messages.model,
-				cost: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)::text`,
-				tokensIn: sql<number>`coalesce(sum(${messages.tokensIn}), 0)::int`,
-				tokensOut: sql<number>`coalesce(sum(${messages.tokensOut}), 0)::int`,
+				model: llmUsage.model,
+				cost: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text`,
+				tokensIn: sql<number>`coalesce(sum(${llmUsage.tokensIn}), 0)::int`,
+				tokensOut: sql<number>`coalesce(sum(${llmUsage.tokensOut}), 0)::int`,
 				count: sql<number>`count(*)::int`,
 			})
-			.from(messages)
-			.where(and(gte(messages.createdAt, since), sql`${messages.model} is not null`))
-			.groupBy(messages.model)
-			.orderBy(sql`sum(${messages.cost}::numeric) desc`),
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, since))
+			.groupBy(llmUsage.model)
+			.orderBy(sql`sum(${llmUsage.cost}::numeric) desc`),
+
+		// Cost by source (chat, agent, titlegen, memory, etc.)
+		db
+			.select({
+				source: llmUsage.source,
+				cost: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text`,
+				tokensIn: sql<number>`coalesce(sum(${llmUsage.tokensIn}), 0)::int`,
+				tokensOut: sql<number>`coalesce(sum(${llmUsage.tokensOut}), 0)::int`,
+				count: sql<number>`count(*)::int`,
+			})
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, since))
+			.groupBy(llmUsage.source)
+			.orderBy(sql`sum(${llmUsage.cost}::numeric) desc`),
 
 		// Top conversations by cost
 		db
@@ -65,20 +80,20 @@ export const getCostSummary = query(costPeriodSchema, async ({ period }) => {
 			.orderBy(sql`${conversations.totalCost}::numeric desc`)
 			.limit(10),
 
-		// Daily spend breakdown
+		// Daily spend breakdown (from llm_usage)
 		db
 			.select({
-				date: sql<string>`date_trunc('day', ${messages.createdAt})::date::text`,
-				cost: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)::text`,
+				date: sql<string>`date_trunc('day', ${llmUsage.createdAt})::date::text`,
+				cost: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text`,
 				count: sql<number>`count(*)::int`,
 			})
-			.from(messages)
-			.where(gte(messages.createdAt, since))
-			.groupBy(sql`date_trunc('day', ${messages.createdAt})`)
-			.orderBy(sql`date_trunc('day', ${messages.createdAt})`),
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, since))
+			.groupBy(sql`date_trunc('day', ${llmUsage.createdAt})`)
+			.orderBy(sql`date_trunc('day', ${llmUsage.createdAt})`),
 	])
 
-	// Agent run costs
+	// Agent run costs (still from agentRuns for run-level detail)
 	const agentCosts = await db
 		.select({
 			total: sql<string>`coalesce(sum(${agentRuns.cost}::numeric), 0)::text`,
@@ -93,10 +108,11 @@ export const getCostSummary = query(costPeriodSchema, async ({ period }) => {
 		totalSpend: totalSpend[0]?.total ?? '0',
 		totalTokensIn: totalSpend[0]?.totalTokensIn ?? 0,
 		totalTokensOut: totalSpend[0]?.totalTokensOut ?? 0,
-		messageCount: totalSpend[0]?.messageCount ?? 0,
+		callCount: totalSpend[0]?.callCount ?? 0,
 		agentSpend: agentCosts[0]?.total ?? '0',
 		agentRunCount: agentCosts[0]?.runCount ?? 0,
 		byModel,
+		bySource,
 		topConversations: byConversation,
 		dailyBreakdown,
 	}
@@ -109,13 +125,13 @@ export const getBudgetStatus = query(async () => {
 
 	const [dailySpend, monthlySpend] = await Promise.all([
 		db
-			.select({ total: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)::text` })
-			.from(messages)
-			.where(gte(messages.createdAt, dayStart)),
+			.select({ total: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text` })
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, dayStart)),
 		db
-			.select({ total: sql<string>`coalesce(sum(${messages.cost}::numeric), 0)::text` })
-			.from(messages)
-			.where(gte(messages.createdAt, monthStart)),
+			.select({ total: sql<string>`coalesce(sum(${llmUsage.cost}::numeric), 0)::text` })
+			.from(llmUsage)
+			.where(gte(llmUsage.createdAt, monthStart)),
 	])
 
 	return {

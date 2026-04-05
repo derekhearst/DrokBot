@@ -42,12 +42,30 @@
 	}
 
 	function fmt(val: string | number): string {
-		return `$${Number(val).toFixed(4)}`;
+		const n = Number(val);
+		if (n === 0) return '$0.00';
+		if (n >= 0.01) return `$${n.toFixed(2)}`;
+		if (n >= 0.0001) return `$${n.toFixed(4)}`;
+		if (n >= 0.000001) return `$${n.toFixed(6)}`;
+		return `$${n.toFixed(8)}`;
 	}
 
 	function pct(spent: string, limit: number | null): number | null {
 		if (!limit) return null;
 		return Math.min(100, (Number(spent) / limit) * 100);
+	}
+
+	const sourceLabels: Record<string, string> = {
+		chat: 'Chat',
+		agent_planner: 'Agent Planner',
+		agent_synthesis: 'Agent Synthesis',
+		titlegen: 'Title Generation',
+		memory_extract: 'Memory Extraction',
+		image_gen: 'Image Generation',
+	};
+
+	function sourceLabel(source: string): string {
+		return sourceLabels[source] ?? source;
 	}
 </script>
 
@@ -56,7 +74,7 @@
 		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Cost Dashboard</h1>
-				<p class="text-sm text-base-content/70">Track LLM spending by model, conversation, and time period.</p>
+				<p class="text-sm text-base-content/70">Track all LLM spending by source, model, and time period.</p>
 			</div>
 		{/snippet}
 		{#snippet actions()}
@@ -114,7 +132,7 @@
 			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/55">Total Spend</h3>
 				<p class="mt-1 text-2xl font-bold">{fmt(costData.totalSpend)}</p>
-				<p class="text-xs text-base-content/70">{costData.messageCount} messages</p>
+				<p class="text-xs text-base-content/70">{costData.callCount} LLM calls</p>
 			</div>
 			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/55">Agent Spend</h3>
@@ -131,6 +149,41 @@
 			</div>
 		</div>
 
+		<!-- Spend by Source -->
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Spend by Source</h2>{/snippet}
+			{#if costData.bySource.length === 0}
+				<p class="mt-2 text-sm text-base-content/70">No usage in this period.</p>
+			{:else}
+				<div class="mt-3 overflow-x-auto">
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Source</th>
+								<th class="text-right">Cost</th>
+								<th class="text-right">Tokens In</th>
+								<th class="text-right">Tokens Out</th>
+								<th class="text-right">Calls</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each costData.bySource as row (row.source)}
+								<tr>
+									<td>
+										<span class="badge badge-sm badge-ghost">{sourceLabel(row.source)}</span>
+									</td>
+									<td class="text-right">{fmt(row.cost)}</td>
+									<td class="text-right">{row.tokensIn.toLocaleString()}</td>
+									<td class="text-right">{row.tokensOut.toLocaleString()}</td>
+									<td class="text-right">{row.count}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</ContentPanel>
+
 		<!-- Cost by Model -->
 		<ContentPanel>
 			{#snippet header()}<h2 class="font-semibold">Spend by Model</h2>{/snippet}
@@ -145,7 +198,7 @@
 								<th class="text-right">Cost</th>
 								<th class="text-right">Tokens In</th>
 								<th class="text-right">Tokens Out</th>
-								<th class="text-right">Messages</th>
+								<th class="text-right">Calls</th>
 							</tr>
 						</thead>
 						<tbody>

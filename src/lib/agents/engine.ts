@@ -4,6 +4,7 @@ import { db } from '$lib/db.server'
 import { agentRuns, agents, agentTasks } from '$lib/agents/agents.schema'
 import { chat } from '$lib/llm/openrouter'
 import { executeTool, type ToolCall, type ToolName } from '$lib/llm/tools'
+import { logLlmUsage } from '$lib/llm/usage'
 import { emitActivity } from '$lib/activity/emit'
 
 type CreateAgentTaskInput = {
@@ -103,6 +104,14 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 		agent.model,
 	)
 
+	const plannerCost = await logLlmUsage({
+		source: 'agent_planner',
+		model: agent.model,
+		tokensIn: plannerResponse.usage?.promptTokens ?? 0,
+		tokensOut: plannerResponse.usage?.completionTokens ?? 0,
+		metadata: { agentId: agent.id, taskId: task.id },
+	}).catch(() => '0')
+
 	const planned = parseToolLoop(plannerResponse.content)
 	const requestedTools = planned.toolCalls ?? []
 	const toolResults: Array<{ call: ToolCall; result: Awaited<ReturnType<typeof executeTool>> }> = []
@@ -128,6 +137,7 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 			usage: plannerResponse.usage ?? {},
 			toolResults,
 			delegatedTaskId,
+			totalCost: plannerCost,
 		}
 	}
 
@@ -156,6 +166,14 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 		agent.model,
 	)
 
+	const synthesisCost = await logLlmUsage({
+		source: 'agent_synthesis',
+		model: agent.model,
+		tokensIn: synthesisResponse.usage?.promptTokens ?? 0,
+		tokensOut: synthesisResponse.usage?.completionTokens ?? 0,
+		metadata: { agentId: agent.id, taskId: task.id },
+	}).catch(() => '0')
+
 	return {
 		summary: synthesisResponse.content,
 		usage: {
@@ -164,6 +182,7 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 		},
 		toolResults,
 		delegatedTaskId,
+		totalCost: String(parseFloat(plannerCost) + parseFloat(synthesisCost)),
 	}
 }
 
@@ -318,6 +337,7 @@ export async function executeAgentTask(taskId: string) {
 					endedAt: new Date(),
 					logs: [startLog, completedLog],
 					tokenUsage: execution.usage,
+					cost: execution.totalCost ?? '0',
 				})
 				.where(eq(agentRuns.id, run.id))
 

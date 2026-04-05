@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private'
 import { chat } from '$lib/llm/openrouter'
+import { logLlmUsage } from '$lib/llm/usage'
 
 const MOCK_EXTERNALS = env.E2E_MOCK_EXTERNALS === '1'
 
@@ -12,6 +13,7 @@ export async function generateTitle(messages: Message[]): Promise<string> {
 
 	const transcript = messages.map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 400)}`).join('\n')
 
+	const titleModel = 'openai/gpt-4o-mini'
 	const response = await chat(
 		[
 			{
@@ -24,8 +26,15 @@ export async function generateTitle(messages: Message[]): Promise<string> {
 				content: `Write a concise 3–8 word title for this conversation:\n\n${transcript}`,
 			},
 		],
-		'openai/gpt-4o-mini',
+		titleModel,
 	)
+
+	void logLlmUsage({
+		source: 'titlegen',
+		model: titleModel,
+		tokensIn: response.usage?.promptTokens ?? 0,
+		tokensOut: response.usage?.completionTokens ?? 0,
+	}).catch(() => {})
 
 	const title = (response.content ?? '')
 		.trim()
@@ -41,6 +50,7 @@ export async function generateTitleAndCategory(messages: Message[]): Promise<{ t
 
 	const transcript = messages.map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 400)}`).join('\n')
 
+	const catModel = 'openai/gpt-4o-mini'
 	const response = await chat(
 		[
 			{
@@ -53,8 +63,15 @@ export async function generateTitleAndCategory(messages: Message[]): Promise<{ t
 				content: `Label this conversation:\n\n${transcript}`,
 			},
 		],
-		'openai/gpt-4o-mini',
+		catModel,
 	)
+
+	void logLlmUsage({
+		source: 'titlegen',
+		model: catModel,
+		tokensIn: response.usage?.promptTokens ?? 0,
+		tokensOut: response.usage?.completionTokens ?? 0,
+	}).catch(() => {})
 
 	try {
 		const raw = response.content

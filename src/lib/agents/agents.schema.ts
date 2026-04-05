@@ -49,7 +49,7 @@ export const agentRuns = pgTable('agent_runs', {
 	startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
 	endedAt: timestamp('ended_at', { withTimezone: true }),
 	tokenUsage: jsonb('token_usage').$type<Record<string, unknown>>().notNull().default({}),
-	cost: numeric('cost', { precision: 12, scale: 6 }).notNull().default('0'),
+	cost: numeric('cost', { precision: 18, scale: 12 }).notNull().default('0'),
 	logs: jsonb('logs').$type<Array<Record<string, unknown>>>().notNull().default([]),
 })
 

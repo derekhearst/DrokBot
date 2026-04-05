@@ -1,4 +1,5 @@
 import { chat } from '$lib/llm/openrouter'
+import { logLlmUsage } from '$lib/llm/usage'
 import { createMemory, createMemoryRelation, searchMemories } from '$lib/memory/store'
 import { emitActivity } from '$lib/activity/emit'
 
@@ -25,13 +26,21 @@ export async function extractFromConversation(messages: ConversationMessage[]) {
 		`Transcript:\n${transcript}`,
 	].join('\n\n')
 
+	const extractModel = 'openai/gpt-4o-mini'
 	const response = await chat(
 		[
 			{ role: 'system', content: 'You extract durable user memory facts for an AI assistant.' },
 			{ role: 'user', content: prompt },
 		],
-		'openai/gpt-4o-mini',
+		extractModel,
 	)
+
+	void logLlmUsage({
+		source: 'memory_extract',
+		model: extractModel,
+		tokensIn: response.usage?.promptTokens ?? 0,
+		tokensOut: response.usage?.completionTokens ?? 0,
+	}).catch(() => {})
 
 	try {
 		const parsed = JSON.parse(response.content) as ExtractedMemory[]

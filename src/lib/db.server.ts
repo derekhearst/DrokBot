@@ -9,6 +9,7 @@ import * as notificationsSchema from '$lib/notifications/notifications.schema'
 import * as settingsSchema from '$lib/settings/settings.schema'
 import * as activitySchema from '$lib/activity/activity.schema'
 import * as artifactsSchema from '$lib/artifacts/artifacts.schema'
+import * as llmUsageSchema from '$lib/llm/usage.schema'
 
 if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set')
 
@@ -23,6 +24,7 @@ const schema = {
 	...settingsSchema,
 	...activitySchema,
 	...artifactsSchema,
+	...llmUsageSchema,
 }
 
 export const db = drizzle(client, { schema })

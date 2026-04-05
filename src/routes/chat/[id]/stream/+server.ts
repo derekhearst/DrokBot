@@ -10,6 +10,7 @@ import { bumpAccessCount } from '$lib/memory/store'
 import { generateTitle } from '$lib/chat/titlegen'
 import { emitActivity } from '$lib/activity/emit'
 import { executeTool, getToolDefinitions, type ToolName, type ToolCallWithContext } from '$lib/llm/tools'
+import { logLlmUsage } from '$lib/llm/usage'
 
 const encoder = new TextEncoder()
 
@@ -286,6 +287,14 @@ For short answers, explanations, and conversational responses, reply with inline
 				const ttftMs = firstTokenAt ? firstTokenAt - startedAt : null
 				const tokensPerSec = totalMs > 0 ? Math.round((completionTokens / (totalMs / 1000)) * 100) / 100 : null
 
+				const messageCost = await logLlmUsage({
+					source: 'chat',
+					model: routedModel,
+					tokensIn: promptTokens,
+					tokensOut: completionTokens,
+					metadata: { conversationId: body.conversationId },
+				})
+
 				const [assistantMessage] = await db
 					.insert(messages)
 					.values({
@@ -299,7 +308,7 @@ For short answers, explanations, and conversational responses, reply with inline
 						ttftMs,
 						totalMs,
 						tokensPerSec,
-						cost: '0',
+						cost: messageCost,
 						metadata: {
 							routing: { tier: routing.tier, reason: routing.reason, budgetDowngraded: routing.budgetDowngraded },
 						},
@@ -328,6 +337,7 @@ For short answers, explanations, and conversational responses, reply with inline
 					.set({
 						model: routedModel,
 						totalTokens: conversation.totalTokens + promptTokens + completionTokens,
+						totalCost: String(parseFloat(conversation.totalCost) + parseFloat(messageCost)),
 						updatedAt: new Date(),
 					})
 					.where(eq(conversations.id, body.conversationId))
@@ -360,7 +370,7 @@ For short answers, explanations, and conversational responses, reply with inline
 						ttftMs,
 						totalMs,
 						tokensPerSec,
-						cost: 0,
+						cost: parseFloat(messageCost),
 						routing: { tier: routing.tier, reason: routing.reason, budgetDowngraded: routing.budgetDowngraded },
 					}),
 				)
