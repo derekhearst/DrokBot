@@ -89,6 +89,18 @@
 				</svg>
 				Review
 			</a>
+			<a href="/artifacts"
+				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class:bg-base-200={isActive('/artifacts')} class:font-medium={isActive('/artifacts')} class:text-primary={isActive('/artifacts')}
+				onclick={onNavigate}>
+				<!-- layers / documents -->
+				<svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<polygon points="12 2 2 7 12 12 22 7 12 2"/>
+					<polyline points="2 17 12 22 22 17"/>
+					<polyline points="2 12 12 17 22 12"/>
+				</svg>
+				Artifacts
+			</a>
 		</div>
 
 		<!-- Insights group -->

@@ -4,14 +4,18 @@
 	import { onMount } from 'svelte';
 	import { listDreamCyclesQuery, runDreamCycleCommand } from '$lib/memory';
 	import {
+		buildImportPromptQuery,
 		createMemoryCommand,
 		deleteMemoryCommand,
+		importMemoriesCommand,
 		listMemoriesQuery,
 		pinMemoryCommand,
 		searchMemoriesQuery,
 		unpinMemoryCommand,
 		updateMemoryCommand
 	} from '$lib/memory';
+	import ModelSelector from '$lib/components/ui/ModelSelector.svelte';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type MemoryRow = Awaited<ReturnType<typeof listMemoriesQuery>>[number];
 	type DreamRow = Awaited<ReturnType<typeof listDreamCyclesQuery>>[number];
@@ -25,6 +29,15 @@
 	let memories = $state<MemoryRow[]>([]);
 	let dreamCycles = $state<DreamRow[]>([]);
 	let mode = $state<'hybrid' | 'semantic'>('hybrid');
+
+	/* ── Importer state ──────────────────────────────── */
+	let showImporter = $state(false);
+	let includeExisting = $state(true);
+	let importPrompt = $state('');
+	let importText = $state('');
+	let importResult = $state<{ imported: number; memories: Array<{ content: string; category: string; importance: number }> } | null>(null);
+	let promptCopied = $state(false);
+	let importModel = $state('openai/gpt-4o-mini');
 
 	const categoryOptions = ['general', 'preference', 'project', 'constraint', 'person'];
 
@@ -108,22 +121,141 @@
 	function isPinned(categoryName: string) {
 		return categoryName === 'pinned' || categoryName.startsWith('pinned:');
 	}
+
+	/* ── Importer handlers ───────────────────────────── */
+	async function handleGeneratePrompt() {
+		if (busy) return;
+		busy = true;
+		try {
+			importPrompt = await buildImportPromptQuery({ includeExisting });
+			promptCopied = false;
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function handleCopyPrompt() {
+		await navigator.clipboard.writeText(importPrompt);
+		promptCopied = true;
+	}
+
+	async function handleImport() {
+		if (!importText.trim() || busy) return;
+		busy = true;
+		importResult = null;
+		try {
+			importResult = await importMemoriesCommand({ text: importText.trim(), model: importModel });
+			if (importResult.imported > 0) {
+				importText = '';
+				await loadMemories();
+			}
+		} finally {
+			busy = false;
+		}
+	}
 </script>
 
 <section class="space-y-5">
-	<header class="rounded-3xl border border-base-300 bg-base-100 p-5">
-		<div class="flex flex-wrap items-center justify-between gap-3">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Memory Explorer</h1>
 				<p class="text-sm text-base-content/70">
 					Inspect durable memories, run semantic retrieval, and trigger dream consolidation.
 				</p>
 			</div>
+		{/snippet}
+		{#snippet actions()}
+			<button
+				class="btn btn-secondary"
+				type="button"
+				onclick={() => (showImporter = !showImporter)}
+			>
+				{showImporter ? 'Close Import' : 'Import'}
+			</button>
 			<button class="btn btn-primary" type="button" onclick={handleRunDreamCycle} disabled={busy}>
 				Run Dream Cycle
 			</button>
-		</div>
-	</header>
+		{/snippet}
+	</ContentPanel>
+
+	{#if showImporter}
+		<section class="rounded-3xl border border-base-300 bg-base-100 p-5 space-y-4">
+			<h2 class="text-lg font-semibold">Import Memories from Another LLM</h2>
+			<p class="text-sm text-base-content/70">
+				Generate a prompt, paste it into ChatGPT / Claude / etc., then paste their response below to import memories.
+			</p>
+
+			<!-- Step 1: Generate Prompt -->
+			<div class="rounded-2xl border border-base-300 bg-base-200/30 p-4 space-y-3">
+				<h3 class="text-sm font-semibold">Step 1 — Copy the extraction prompt</h3>
+				<div class="flex flex-wrap items-center gap-3">
+					<label class="label cursor-pointer gap-2">
+						<input type="checkbox" class="checkbox checkbox-sm" bind:checked={includeExisting} />
+						<span class="label-text">Include existing memory context</span>
+					</label>
+					<button class="btn btn-sm btn-primary" type="button" onclick={handleGeneratePrompt} disabled={busy}>
+						Generate Prompt
+					</button>
+				</div>
+				{#if importPrompt}
+					<textarea
+						class="textarea textarea-bordered w-full font-mono text-xs"
+						rows="8"
+						readonly
+						value={importPrompt}
+					></textarea>
+					<button class="btn btn-sm btn-outline" type="button" onclick={handleCopyPrompt}>
+						{promptCopied ? 'Copied!' : 'Copy to Clipboard'}
+					</button>
+				{/if}
+			</div>
+
+			<!-- Step 2: Paste Response -->
+			<div class="rounded-2xl border border-base-300 bg-base-200/30 p-4 space-y-3">
+				<h3 class="text-sm font-semibold">Step 2 — Paste the LLM's response</h3>
+				<div class="flex flex-wrap items-center gap-3">
+					<span class="text-sm text-base-content/70">Extraction model:</span>
+					<ModelSelector value={importModel} onchange={(id) => (importModel = id)} size="sm" />
+				</div>
+				<textarea
+					class="textarea textarea-bordered w-full"
+					rows="8"
+					bind:value={importText}
+					placeholder="Paste the response from the other LLM here..."
+				></textarea>
+				<button
+					class="btn btn-sm btn-success"
+					type="button"
+					onclick={handleImport}
+					disabled={busy || !importText.trim()}
+				>
+					{busy ? 'Importing...' : 'Import Memories'}
+				</button>
+			</div>
+
+			<!-- Result -->
+			{#if importResult}
+				<div class="rounded-2xl border border-success/30 bg-success/5 p-4">
+					{#if importResult.imported === 0}
+						<p class="text-sm text-base-content/70">No new memories were extracted (all duplicates or empty).</p>
+					{:else}
+						<p class="text-sm font-medium text-success">
+							Imported {importResult.imported} {importResult.imported === 1 ? 'memory' : 'memories'}
+						</p>
+						<ul class="mt-2 space-y-1">
+							{#each importResult.memories as m}
+								<li class="text-sm">
+									<span class="badge badge-outline badge-sm mr-1">{m.category}</span>
+									{m.content}
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			{/if}
+		</section>
+	{/if}
 
 	<div class="grid gap-4 xl:grid-cols-[2fr_1fr]">
 		<section class="space-y-4 rounded-3xl border border-base-300 bg-base-100 p-4">

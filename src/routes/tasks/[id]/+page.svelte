@@ -6,6 +6,7 @@
 	import { getAgentChoices, runTaskNow } from '$lib/agents';
 	import { getTask, reassignTask, setTaskStatus, requestChanges, getTaskComments, getTaskMessages, addTaskMessage } from '$lib/tasks';
 	import { approveChanges, getChangedFiles, getTaskDiff, rejectChanges, requestRevision } from '$lib/tasks';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	const taskId = $derived(page.params.id ?? '');
 
@@ -128,16 +129,20 @@
 {:else}
 	<section class="space-y-4">
 		<a class="btn btn-sm btn-ghost" href="/tasks">Back to tasks</a>
-		<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h1 class="text-2xl font-bold">{detail.task.title}</h1>
-			<p class="mt-1 text-sm text-base-content/70">{detail.task.description}</p>
-			<p class="mt-1 text-xs text-base-content/60">
-				status {detail.task.status} | priority {detail.task.priority} | agent {detail.agent?.name ?? 'unknown'}
-				{#if detail.task.reviewType}
-					| review type <span class="badge badge-xs">{detail.task.reviewType}</span>
-				{/if}
-			</p>
-			<div class="mt-3 flex flex-wrap gap-1">
+		<ContentPanel>
+			{#snippet header()}
+				<div>
+					<h1 class="text-2xl font-bold">{detail?.task.title}</h1>
+					<p class="mt-1 text-sm text-base-content/70">{detail?.task.description}</p>
+					<p class="mt-1 text-xs text-base-content/60">
+						status {detail?.task.status} | priority {detail?.task.priority} | agent {detail?.agent?.name ?? 'unknown'}
+						{#if detail?.task.reviewType}
+							| review type <span class="badge badge-xs">{detail.task.reviewType}</span>
+						{/if}
+					</p>
+				</div>
+			{/snippet}
+			<div class="flex flex-wrap gap-1">
 				<button class="btn btn-xs" type="button" onclick={runTask} disabled={busy}>Run</button>
 				<button class="btn btn-xs" type="button" onclick={() => setStatus('pending')}>Pending</button>
 				<button class="btn btn-xs" type="button" onclick={() => setStatus('review')}>Review</button>
@@ -145,11 +150,11 @@
 				<button class="btn btn-xs btn-warning btn-outline" type="button" onclick={() => setStatus('changes_requested')}>Request Changes</button>
 				<button class="btn btn-xs btn-error btn-outline" type="button" onclick={() => setStatus('failed')}>Fail</button>
 			</div>
-		</header>
+		</ContentPanel>
 
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Assignment</h2>
-			<div class="mt-2 flex flex-wrap gap-2">
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Assignment</h2>{/snippet}
+			<div class="flex flex-wrap gap-2">
 				<select class="select select-bordered" bind:value={selectedAgent}>
 					{#each agents as agent (agent.id)}
 						<option value={agent.id}>{agent.name} ({agent.status})</option>
@@ -157,11 +162,11 @@
 				</select>
 				<button class="btn btn-outline" type="button" onclick={applyReassignment}>Reassign</button>
 			</div>
-		</section>
+		</ContentPanel>
 
 		<section class="grid gap-4 xl:grid-cols-2">
-			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Changed Files</h2>
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Changed Files</h2>{/snippet}
 				{#if reviewError}
 					<p class="mt-2 text-sm text-warning">{reviewError}</p>
 				{:else if files.length === 0}
@@ -173,11 +178,11 @@
 						{/each}
 					</ul>
 				{/if}
-			</div>
+			</ContentPanel>
 
-			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Review Actions</h2>
-				<div class="mt-2 flex flex-wrap gap-2">
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Review Actions</h2>{/snippet}
+				<div class="flex flex-wrap gap-2">
 					<button class="btn btn-success btn-sm" type="button" onclick={approve}>Approve</button>
 					<button class="btn btn-error btn-outline btn-sm" type="button" onclick={reject}>Reject</button>
 				</div>
@@ -187,21 +192,21 @@
 					placeholder="Request revision feedback"
 				></textarea>
 				<button class="btn btn-outline btn-sm mt-2" type="button" onclick={askRevision}>Request Revision</button>
-			</div>
+			</ContentPanel>
 		</section>
 
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Diff</h2>
-			<pre class="mt-2 max-h-[420px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{diff || 'No diff available'}</pre>
-		</section>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Diff</h2>{/snippet}
+			<pre class="max-h-[420px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{diff || 'No diff available'}</pre>
+		</ContentPanel>
 
 		<!-- Changes Requested Comments -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Change Requests</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Change Requests</h2>{/snippet}
 			{#if comments.length === 0}
-				<p class="mt-2 text-sm text-base-content/70">No change requests yet.</p>
+				<p class="text-sm text-base-content/70">No change requests yet.</p>
 			{:else}
-				<div class="mt-2 space-y-2">
+				<div class="space-y-2">
 					{#each comments as comment (comment.id)}
 						<div class="rounded-xl border border-base-300 bg-base-50 p-3 text-sm">
 							<p class="text-xs text-base-content/55">{comment.role} · {new Date(comment.createdAt).toLocaleString()}</p>
@@ -220,15 +225,15 @@
 					Request Changes
 				</button>
 			</div>
-		</section>
+		</ContentPanel>
 
 		<!-- Task Chat Thread -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Task Thread</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Task Thread</h2>{/snippet}
 			{#if threadMessages.length === 0}
-				<p class="mt-2 text-sm text-base-content/70">No messages yet. Start a conversation about this task.</p>
+				<p class="text-sm text-base-content/70">No messages yet. Start a conversation about this task.</p>
 			{:else}
-				<div class="mt-2 max-h-80 space-y-2 overflow-y-auto">
+				<div class="max-h-80 space-y-2 overflow-y-auto">
 					{#each threadMessages as msg (msg.id)}
 						<div class="flex gap-2" class:flex-row-reverse={msg.role === 'user'}>
 							<div
@@ -253,15 +258,15 @@
 				/>
 				<button class="btn btn-primary btn-sm" type="button" onclick={sendThreadMessage} disabled={!newThreadMessage.trim()}>Send</button>
 			</div>
-		</section>
+		</ContentPanel>
 
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Execution Result</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Execution Result</h2>{/snippet}
 			{#if typeof detail.task.result === 'object' && detail.task.result}
-				<pre class="mt-2 max-h-[260px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(detail.task.result, null, 2)}</pre>
+				<pre class="max-h-[260px] overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(detail.task.result, null, 2)}</pre>
 			{:else}
-				<p class="mt-2 text-sm text-base-content/70">No execution metadata yet.</p>
+				<p class="text-sm text-base-content/70">No execution metadata yet.</p>
 			{/if}
-		</section>
+		</ContentPanel>
 	</section>
 {/if}

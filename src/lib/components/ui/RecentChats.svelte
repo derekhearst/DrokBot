@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getConversations } from '$lib/chat';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type Conversation = Awaited<ReturnType<typeof getConversations>>[number];
 	type GroupMode = 'date' | 'category';
@@ -108,9 +109,11 @@
 	});
 </script>
 
-<div class="flex h-full flex-col">
-	<div class="flex items-center justify-between">
+<ContentPanel bare compact flush>
+	{#snippet header()}
 		<h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Chats</h2>
+	{/snippet}
+	{#snippet actions()}
 		<label class="flex items-center gap-2 text-xs text-base-content/60">
 			<span>Group</span>
 			<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
@@ -118,9 +121,9 @@
 				<option value="category">Category</option>
 			</select>
 		</label>
-	</div>
+	{/snippet}
 
-	<div class="mt-3 flex-1 space-y-4 overflow-y-auto">
+	<div class="mt-3 space-y-4">
 		{#if conversations.length === 0}
 			<p class="py-6 text-center text-sm text-base-content/40">No conversations yet</p>
 		{:else}
@@ -144,4 +147,4 @@
 			{/each}
 		{/if}
 	</div>
-</div>
+</ContentPanel>

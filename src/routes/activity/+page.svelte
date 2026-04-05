@@ -3,6 +3,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { listActivity } from '$lib/activity';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type ActivityRow = Awaited<ReturnType<typeof listActivity>>[number];
 	type EventType = ActivityRow['type'];
@@ -68,16 +69,18 @@
 </script>
 
 <section class="space-y-4">
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Activity Feed</h1>
 				<p class="text-sm text-base-content/70">Chronological stream of all system activity.</p>
 			</div>
+		{/snippet}
+		{#snippet actions()}
 			<button class="btn btn-outline btn-sm" type="button" onclick={refresh}>Refresh</button>
-		</div>
+		{/snippet}
 
-		<div class="mt-3 flex flex-wrap gap-1">
+		<div class="flex flex-wrap gap-1">
 			{#each eventTypes as et (et.value)}
 				<button
 					class="btn btn-xs"
@@ -89,7 +92,7 @@
 				</button>
 			{/each}
 		</div>
-	</header>
+	</ContentPanel>
 
 	{#if loading}
 		<div class="flex justify-center p-8"><span class="loading loading-spinner loading-lg"></span></div>

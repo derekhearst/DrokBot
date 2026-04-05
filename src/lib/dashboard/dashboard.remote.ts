@@ -19,6 +19,7 @@ export const getDashboardSummary = query(async () => {
 		taskCount,
 		memoryCount,
 		notificationCount,
+		artifactCount,
 		tasksByStatus,
 		recentConversations,
 		recentTasks,
@@ -29,6 +30,7 @@ export const getDashboardSummary = query(async () => {
 		getCount('agent_tasks'),
 		getCount('memories'),
 		getCount('notifications'),
+		getCount('artifacts'),
 		db
 			.select({
 				status: agentTasks.status,
@@ -70,6 +72,7 @@ export const getDashboardSummary = query(async () => {
 			taskCount,
 			memoryCount,
 			notificationCount,
+			artifactCount,
 		},
 		tasksByStatus,
 		recentConversations,

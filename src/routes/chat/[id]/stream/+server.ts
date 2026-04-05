@@ -9,6 +9,7 @@ import { assembleContext } from '$lib/memory/context'
 import { bumpAccessCount } from '$lib/memory/store'
 import { generateTitle } from '$lib/chat/titlegen'
 import { emitActivity } from '$lib/activity/emit'
+import { executeTool, getToolDefinitions, type ToolName, type ToolCallWithContext } from '$lib/llm/tools'
 
 const encoder = new TextEncoder()
 
@@ -117,47 +118,167 @@ export const POST: RequestHandler = async ({ request }) => {
 		await Promise.all(memoryContext.memories.map((memory) => bumpAccessCount(memory.id)))
 	}
 
+	// Artifact creation guidance
+	llmMessages.unshift({
+		role: 'system',
+		content: `You have access to tools including artifact_create, artifact_update, and artifact_storage_update. Use artifact_create to produce persistent, versioned artifacts for:
+- Code snippets longer than ~15 lines
+- Full documents, READMEs, guides, or reports
+- Configuration files (YAML, JSON, TOML, etc.)
+- HTML pages or SVG graphics
+- Mermaid diagrams
+- Data tables (as JSON arrays)
+- Svelte components
+
+For short answers, explanations, and conversational responses, reply with inline text as normal. When creating artifacts, always set an appropriate type and descriptive title.`,
+	})
+
 	const startedAt = Date.now()
 	let firstTokenAt: number | null = null
 	let assistantContent = ''
 	let promptTokens = 0
 	let completionTokens = 0
 
-	const stream = await streamChat(llmMessages, routedModel)
+	const tools = getToolDefinitions()
+	const MAX_TOOL_ROUNDS = 3
 
 	const readable = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			try {
-				for await (const chunk of stream) {
-					const delta = chunk.choices?.[0]?.delta as
-						| {
-								content?: string
-								toolCalls?: Array<{ id?: string; function?: { name?: string; arguments?: string } }>
-						  }
-						| undefined
-					const content = delta?.content
-					if (content) {
-						if (firstTokenAt === null) {
-							firstTokenAt = Date.now()
+				let currentMessages = [...llmMessages]
+				const allToolCalls: Array<Record<string, unknown>> = []
+
+				for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+					const stream = await streamChat(currentMessages, routedModel, tools)
+
+					// Accumulated tool calls for this round (streamed piecewise)
+					const pendingToolCalls: Array<{
+						id: string
+						name: string
+						arguments: string
+					}> = []
+
+					assistantContent = ''
+
+					for await (const chunk of stream) {
+						const delta = chunk.choices?.[0]?.delta as
+							| {
+									content?: string
+									tool_calls?: Array<{
+										index?: number
+										id?: string
+										function?: { name?: string; arguments?: string }
+									}>
+							  }
+							| undefined
+						const content = delta?.content
+						if (content) {
+							if (firstTokenAt === null) {
+								firstTokenAt = Date.now()
+							}
+							assistantContent += content
+							controller.enqueue(sse('delta', { content }))
 						}
-						assistantContent += content
-						controller.enqueue(sse('delta', { content }))
+
+						// Accumulate streamed tool calls
+						const deltaToolCalls = delta?.tool_calls
+						if (deltaToolCalls) {
+							for (const tc of deltaToolCalls) {
+								const idx = tc.index ?? 0
+								if (!pendingToolCalls[idx]) {
+									pendingToolCalls[idx] = { id: tc.id ?? '', name: '', arguments: '' }
+								}
+								if (tc.id) pendingToolCalls[idx].id = tc.id
+								if (tc.function?.name) pendingToolCalls[idx].name += tc.function.name
+								if (tc.function?.arguments) pendingToolCalls[idx].arguments += tc.function.arguments
+							}
+						}
+
+						if (chunk.usage) {
+							promptTokens += chunk.usage.promptTokens ?? 0
+							completionTokens += chunk.usage.completionTokens ?? 0
+						}
 					}
 
-					const toolCall = delta?.toolCalls?.[0]
-					if (toolCall) {
+					// Check for finish_reason tool_calls or pending tool calls
+					const validToolCalls = pendingToolCalls.filter((tc) => tc.name)
+					if (validToolCalls.length === 0) {
+						// No tool calls — we're done
+						break
+					}
+
+					// Execute each tool call
+					const toolResults: Array<{ call_id: string; name: string; result: string }> = []
+					for (const tc of validToolCalls) {
+						let parsedArgs: unknown = {}
+						try {
+							parsedArgs = JSON.parse(tc.arguments)
+						} catch {
+							// Bad JSON — skip
+						}
+
 						controller.enqueue(
 							sse('tool_call', {
-								id: toolCall.id ?? null,
-								name: toolCall.function?.name ?? null,
-								arguments: toolCall.function?.arguments ?? null,
+								id: tc.id,
+								name: tc.name,
+								arguments: tc.arguments,
 							}),
 						)
+
+						const toolCall: ToolCallWithContext = {
+							name: tc.name as ToolName,
+							arguments: parsedArgs,
+							conversationId: body.conversationId,
+							messageId: null,
+						}
+
+						const toolResult = await executeTool(toolCall)
+
+						const resultStr = toolResult.success ? JSON.stringify(toolResult.result) : `Error: ${toolResult.error}`
+
+						toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
+
+						// Emit artifact_created if this was an artifact_create tool
+						if (tc.name === 'artifact_create' && toolResult.success && toolResult.result) {
+							const artifactResult = toolResult.result as { artifactId?: string; title?: string; type?: string }
+							if (artifactResult.artifactId) {
+								controller.enqueue(
+									sse('artifact_created', {
+										artifactId: artifactResult.artifactId,
+										title: artifactResult.title,
+										type: artifactResult.type,
+									}),
+								)
+							}
+						}
+
+						controller.enqueue(
+							sse('tool_result', {
+								name: tc.name,
+								success: toolResult.success,
+								executionMs: toolResult.executionMs,
+							}),
+						)
+
+						allToolCalls.push({
+							name: tc.name,
+							arguments: parsedArgs,
+							result: toolResult.success ? toolResult.result : { error: toolResult.error },
+							executionMs: toolResult.executionMs,
+						})
 					}
 
-					if (chunk.usage) {
-						promptTokens = chunk.usage.promptTokens ?? promptTokens
-						completionTokens = chunk.usage.completionTokens ?? completionTokens
+					// Append assistant message with tool_calls + tool results to conversation for next round
+					currentMessages.push({
+						role: 'assistant',
+						content: assistantContent || '',
+					})
+
+					for (const tr of toolResults) {
+						currentMessages.push({
+							role: 'tool',
+							content: tr.result,
+						})
 					}
 				}
 
@@ -182,9 +303,25 @@ export const POST: RequestHandler = async ({ request }) => {
 						metadata: {
 							routing: { tier: routing.tier, reason: routing.reason, budgetDowngraded: routing.budgetDowngraded },
 						},
-						toolCalls: [],
+						toolCalls: allToolCalls,
 					})
 					.returning()
+
+				// Link any artifacts created in this exchange to this message
+				if (allToolCalls.length > 0) {
+					const { artifacts: artifactsTable } = await import('$lib/artifacts/artifacts.schema')
+					for (const tc of allToolCalls) {
+						if (tc.name === 'artifact_create') {
+							const result = tc.result as { artifactId?: string } | undefined
+							if (result?.artifactId) {
+								await db
+									.update(artifactsTable)
+									.set({ messageId: assistantMessage.id })
+									.where(eq(artifactsTable.id, result.artifactId))
+							}
+						}
+					}
+				}
 
 				await db
 					.update(conversations)

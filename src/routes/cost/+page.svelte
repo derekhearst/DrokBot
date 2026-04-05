@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { getCostSummary, getBudgetStatus } from '$lib/dashboard';
 	import { getSettings } from '$lib/settings';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type CostData = Awaited<ReturnType<typeof getCostSummary>>;
 	type BudgetData = Awaited<ReturnType<typeof getBudgetStatus>>;
@@ -51,21 +52,21 @@
 </script>
 
 <section class="space-y-4">
-	<a class="btn btn-sm btn-ghost" href="/dashboard">Back to dashboard</a>
-
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Cost Dashboard</h1>
 				<p class="text-sm text-base-content/70">Track LLM spending by model, conversation, and time period.</p>
 			</div>
+		{/snippet}
+		{#snippet actions()}
 			<div class="join">
 				<button class="btn join-item" class:btn-active={period === 'day'} type="button" onclick={() => changePeriod('day')}>Day</button>
 				<button class="btn join-item" class:btn-active={period === 'week'} type="button" onclick={() => changePeriod('week')}>Week</button>
 				<button class="btn join-item" class:btn-active={period === 'month'} type="button" onclick={() => changePeriod('month')}>Month</button>
 			</div>
-		</div>
-	</header>
+		{/snippet}
+	</ContentPanel>
 
 	{#if !costData}
 		<div class="flex justify-center p-8"><span class="loading loading-spinner loading-lg"></span></div>
@@ -131,8 +132,8 @@
 		</div>
 
 		<!-- Cost by Model -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Spend by Model</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Spend by Model</h2>{/snippet}
 			{#if costData.byModel.length === 0}
 				<p class="mt-2 text-sm text-base-content/70">No model usage in this period.</p>
 			{:else}
@@ -161,11 +162,11 @@
 					</table>
 				</div>
 			{/if}
-		</section>
+		</ContentPanel>
 
 		<!-- Daily Breakdown -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Daily Breakdown</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Daily Breakdown</h2>{/snippet}
 			{#if costData.dailyBreakdown.length === 0}
 				<p class="mt-2 text-sm text-base-content/70">No usage data.</p>
 			{:else}
@@ -186,11 +187,11 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</ContentPanel>
 
 		<!-- Top Conversations -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Top Conversations by Cost</h2>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Top Conversations by Cost</h2>{/snippet}
 			{#if costData.topConversations.length === 0}
 				<p class="mt-2 text-sm text-base-content/70">No conversations in this period.</p>
 			{:else}
@@ -206,6 +207,6 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</ContentPanel>
 	{/if}
 </section>

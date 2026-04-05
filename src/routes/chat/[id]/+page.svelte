@@ -11,9 +11,11 @@
 	} from '$lib/chat';
 	import { getAvailableModels } from '$lib/llm';
 	import { getSettings } from '$lib/settings';
+	import { getArtifact, getArtifactsByConversation, pinArtifact as pinArtifactCommand } from '$lib/artifacts';
 	import ChatInput from '$lib/components/chat/ChatInput.svelte';
 	import ContextWindow from '$lib/components/chat/ContextWindow.svelte';
 	import MessageBubble from '$lib/components/chat/MessageBubble.svelte';
+	import ArtifactPanel from '$lib/components/artifacts/ArtifactPanel.svelte';
 
 	const conversationId = $derived(page.params.id ?? '');
 	let model = $state('anthropic/claude-sonnet-4');
@@ -33,6 +35,40 @@
 	let messagesEl = $state<HTMLDivElement | undefined>(undefined);
 	let consumedInitialPrompt = $state(false);
 	let modelSwitchNotice = $state<string | null>(null);
+
+	// Artifact panel state
+	type PanelMode = 'collapsed' | 'panel' | 'fullscreen';
+	let activeArtifact = $state<Awaited<ReturnType<typeof getArtifact>> | null>(null);
+	let artifactPanelMode = $state<PanelMode>('collapsed');
+	let conversationArtifacts = $state<Awaited<ReturnType<typeof getArtifactsByConversation>>>([]);
+
+	async function openArtifact(artifactId: string) {
+		const result = await getArtifact(artifactId);
+		if (result) {
+			activeArtifact = result;
+			artifactPanelMode = 'panel';
+		}
+	}
+
+	function closeArtifactPanel() {
+		activeArtifact = null;
+		artifactPanelMode = 'collapsed';
+	}
+
+	async function handlePinArtifact(id: string, pinned: boolean) {
+		await pinArtifactCommand({ id, pinned });
+		if (activeArtifact && activeArtifact.id === id) {
+			activeArtifact = { ...activeArtifact, pinned };
+		}
+	}
+
+	async function loadConversationArtifacts() {
+		if (!conversationId) {
+			conversationArtifacts = [];
+			return;
+		}
+		conversationArtifacts = await getArtifactsByConversation(conversationId);
+	}
 
 	async function scrollToBottom() {
 		await tick();
@@ -240,7 +276,7 @@
 	}
 
 	async function refreshAll() {
-		await loadConversationState();
+		await Promise.all([loadConversationState(), loadConversationArtifacts()]);
 	}
 
 	function stopStreaming() {
@@ -304,6 +340,13 @@
 					if (eventName === 'delta') {
 						waitingForFirstToken = false;
 						draftAssistant += payload.content ?? '';
+					}
+
+					if (eventName === 'artifact_created') {
+						// Artifact was created during tool execution — open it
+						if (payload.artifactId) {
+							void openArtifact(payload.artifactId);
+						}
 					}
 
 					if (eventName === 'done') {
@@ -393,51 +436,55 @@
 	}
 </script>
 
-{#if !conversationData}
-	<p class="text-sm opacity-70">Conversation not found.</p>
-{:else}
-	<section class="flex min-h-0 w-full flex-1 flex-col gap-1 pt-0 pb-1">
-		<!-- Inline floating top bar: title · model · context stats -->
-		<div class="flex shrink-0 items-center gap-2 px-0">
-			<h1 class="min-w-0 flex-1 truncate text-base font-semibold">
-				{conversationData.conversation.title}
-			</h1>
-			<ContextWindow
-				used={contextMetrics.used}
-				total={contextMetrics.total}
-				breakdown={contextMetrics.breakdown}
-				modelUsage={contextMetrics.modelUsage}
-				reservedTargetPct={reservedResponsePct}
-				onCompact={compactContext}
-			/>
-		</div>
-
-		{#if modelSwitchNotice}
-			<div class="alert alert-info mt-1 mb-1 py-2 text-sm">
-				<span>{modelSwitchNotice}</span>
+<div class="flex min-h-0 w-full flex-1 gap-0" class:artifact-split={artifactPanelMode === 'panel'}>
+	<section class="flex min-h-0 flex-1 flex-col gap-1 pt-0 pb-1" class:max-w-full={artifactPanelMode !== 'panel'}>
+		{#if !conversationData}
+			<div class="flex flex-1 items-center justify-center">
+				<span class="loading loading-spinner loading-sm opacity-50"></span>
 			</div>
-		{/if}
+		{:else}
+			<!-- Inline floating top bar: title · model · context stats -->
+			<div class="flex shrink-0 items-center gap-2 px-0">
+				<h1 class="min-w-0 flex-1 truncate text-base font-semibold">
+					{conversationData.conversation.title}
+				</h1>
+				<ContextWindow
+					used={contextMetrics.used}
+					total={contextMetrics.total}
+					breakdown={contextMetrics.breakdown}
+					modelUsage={contextMetrics.modelUsage}
+					reservedTargetPct={reservedResponsePct}
+					onCompact={compactContext}
+				/>
+			</div>
 
-		<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-2 overflow-y-auto px-0.5 py-1">
-			{#each displayedMessages as message (message.id)}
-				<MessageBubble message={message} onEdit={handleEdit} onRegenerate={handleRegenerate} />
-			{/each}
-
-			{#if waitingForFirstToken && streaming && !draftAssistant}
-				<article class="chat chat-start">
-					<div class="chat-bubble chat-bubble-neutral">
-						<span class="loading loading-dots loading-sm" aria-label="Assistant is generating a response"></span>
-					</div>
-				</article>
-			{:else if draftAssistant && streaming}
-				<article class="chat chat-start">
-					<div class="chat-bubble chat-bubble-neutral whitespace-pre-wrap">{draftAssistant}</div>
-				</article>
+			{#if modelSwitchNotice}
+				<div class="alert alert-info mt-1 mb-1 py-2 text-sm">
+					<span>{modelSwitchNotice}</span>
+				</div>
 			{/if}
-		</div>
 
-		{#if streamError}
-			<p class="text-sm text-error">{streamError}</p>
+			<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-2 overflow-y-auto px-0.5 py-1">
+				{#each displayedMessages as message (message.id)}
+					<MessageBubble {message} artifacts={conversationArtifacts} onEdit={handleEdit} onRegenerate={handleRegenerate} onOpenArtifact={openArtifact} />
+				{/each}
+
+				{#if waitingForFirstToken && streaming && !draftAssistant}
+					<article class="chat chat-start">
+						<div class="chat-bubble chat-bubble-neutral">
+							<span class="loading loading-dots loading-sm" aria-label="Assistant is generating a response"></span>
+						</div>
+					</article>
+				{:else if draftAssistant && streaming}
+					<article class="chat chat-start">
+						<div class="chat-bubble chat-bubble-neutral whitespace-pre-wrap">{draftAssistant}</div>
+					</article>
+				{/if}
+			</div>
+
+			{#if streamError}
+				<p class="text-sm text-error">{streamError}</p>
+			{/if}
 		{/if}
 
 		<div class="chat-composer-transition">
@@ -451,5 +498,16 @@
 			/>
 		</div>
 	</section>
-{/if}
+
+	{#if artifactPanelMode === 'panel' || artifactPanelMode === 'fullscreen'}
+		<div class="hidden min-h-0 w-[55%] shrink-0 border-l border-base-300 lg:block" class:!block={artifactPanelMode === 'fullscreen'}>
+			<ArtifactPanel
+				artifact={activeArtifact}
+				mode={artifactPanelMode}
+				onClose={closeArtifactPanel}
+				onPin={handlePinArtifact}
+			/>
+		</div>
+	{/if}
+</div>
 

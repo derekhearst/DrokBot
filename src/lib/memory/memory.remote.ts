@@ -13,6 +13,7 @@ import {
 	unpinMemoryRecord,
 	updateMemoryRecord,
 } from '$lib/memory/store'
+import { buildImportPrompt, extractFromImportText } from '$lib/memory/import'
 
 const createMemorySchema = z.object({
 	content: z.string().trim().min(1),
@@ -91,4 +92,23 @@ export const unpinMemoryCommand = command(memoryIdSchema, async ({ id }) => {
 export const touchMemoryCommand = command(memoryIdSchema, async ({ id }) => {
 	await bumpAccessCount(id)
 	return { ok: true }
+})
+
+/* ── Memory Importer ────────────────────────────────────────── */
+
+const buildImportPromptSchema = z.object({
+	includeExisting: z.boolean().optional(),
+})
+
+const importMemoriesSchema = z.object({
+	text: z.string().trim().min(1),
+	model: z.string().trim().min(1).optional(),
+})
+
+export const buildImportPromptQuery = query(buildImportPromptSchema, async ({ includeExisting }) => {
+	return buildImportPrompt({ includeExisting })
+})
+
+export const importMemoriesCommand = command(importMemoriesSchema, async ({ text, model }) => {
+	return extractFromImportText(text, model)
 })

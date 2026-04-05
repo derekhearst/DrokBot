@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { getAgentRun } from '$lib/agents';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	const agentId = $derived(page.params.id ?? '');
 	const runId = $derived(page.params.runId ?? '');
@@ -51,29 +52,33 @@
 		</div>
 
 		<!-- Run Header -->
-		<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h1 class="text-2xl font-bold">Run Trace</h1>
-			<div class="mt-2 grid gap-1 text-sm">
-				<p>
-					<span class="text-base-content/55">Agent:</span>
-					{data.agent?.name ?? 'Unknown'} ({data.agent?.model ?? 'unknown model'})
-				</p>
-				{#if data.task}
-					<p><span class="text-base-content/55">Task:</span> {data.task.title}</p>
-					<p><span class="text-base-content/55">Status:</span> <span class="badge badge-sm">{data.task.status}</span></p>
-				{/if}
-				<p>
-					<span class="text-base-content/55">Duration:</span>
-					{duration(data.run.startedAt, data.run.endedAt)}
-				</p>
-				<p><span class="text-base-content/55">Cost:</span> {fmt(data.run.cost)}</p>
-			</div>
-		</header>
+		<ContentPanel>
+			{#snippet header()}
+				<div>
+					<h1 class="text-2xl font-bold">Run Trace</h1>
+					<div class="mt-2 grid gap-1 text-sm">
+						<p>
+							<span class="text-base-content/55">Agent:</span>
+							{data?.agent?.name ?? 'Unknown'} ({data?.agent?.model ?? 'unknown model'})
+						</p>
+						{#if data?.task}
+							<p><span class="text-base-content/55">Task:</span> {data.task.title}</p>
+							<p><span class="text-base-content/55">Status:</span> <span class="badge badge-sm">{data.task.status}</span></p>
+						{/if}
+						<p>
+							<span class="text-base-content/55">Duration:</span>
+							{duration(data?.run.startedAt ?? new Date(), data?.run.endedAt ?? new Date())}
+						</p>
+						<p><span class="text-base-content/55">Cost:</span> {fmt(data?.run.cost ?? 0)}</p>
+					</div>
+				</div>
+			{/snippet}
+		</ContentPanel>
 
 		<!-- Execution Timeline -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Execution Timeline</h2>
-			<div class="mt-3">
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Execution Timeline</h2>{/snippet}
+			<div>
 				{#if data.run.logs && Array.isArray(data.run.logs) && data.run.logs.length > 0}
 					<ul class="timeline timeline-vertical timeline-compact">
 						{#each data.run.logs as log, i}
@@ -118,13 +123,13 @@
 					<p class="text-sm text-base-content/70">No timeline entries.</p>
 				{/if}
 			</div>
-		</section>
+		</ContentPanel>
 
 		<!-- Tool Call Details -->
 		{#if data.toolResults.length > 0}
-			<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Tool Calls</h2>
-				<div class="mt-3 space-y-3">
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Tool Calls</h2>{/snippet}
+				<div class="space-y-3">
 					{#each data.toolResults as entry, i}
 						<details class="collapse collapse-arrow rounded-xl border border-base-300">
 							<summary class="collapse-title flex items-center gap-2 text-sm font-medium">
@@ -149,21 +154,21 @@
 						</details>
 					{/each}
 				</div>
-			</section>
+			</ContentPanel>
 		{/if}
 
 		<!-- Token Usage -->
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Token Usage</h2>
-			<pre class="mt-2 max-h-60 overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(data.run.tokenUsage, null, 2)}</pre>
-		</section>
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Token Usage</h2>{/snippet}
+			<pre class="max-h-60 overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(data.run.tokenUsage, null, 2)}</pre>
+		</ContentPanel>
 
 		<!-- Task Result -->
 		{#if data.task?.result && typeof data.task.result === 'object'}
-			<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Task Result</h2>
-				<pre class="mt-2 max-h-60 overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(data.task.result, null, 2)}</pre>
-			</section>
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Task Result</h2>{/snippet}
+				<pre class="max-h-60 overflow-auto rounded border border-base-300 bg-base-50 p-3 text-xs">{JSON.stringify(data.task.result, null, 2)}</pre>
+			</ContentPanel>
 		{/if}
 	</section>
 {/if}

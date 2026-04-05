@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { listAgentRuns } from '$lib/agents';
 	import { getAgent } from '$lib/agents';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	const agentId = $derived(page.params.id ?? '');
 
@@ -42,13 +43,17 @@
 		<a class="btn btn-sm btn-ghost" href="/agents/{agentId}">Back to agent</a>
 	</div>
 
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<h1 class="text-2xl font-bold">Run History</h1>
-		{#if agentData}
-			<p class="text-sm text-base-content/70">{agentData.agent.name} — {agentData.agent.role}</p>
-		{/if}
-		<p class="text-xs text-base-content/60">{runs.length} runs</p>
-	</header>
+	<ContentPanel>
+		{#snippet header()}
+			<div>
+				<h1 class="text-2xl font-bold">Run History</h1>
+				{#if agentData}
+					<p class="text-sm text-base-content/70">{agentData.agent.name} — {agentData.agent.role}</p>
+				{/if}
+				<p class="text-xs text-base-content/60">{runs.length} runs</p>
+			</div>
+		{/snippet}
+	</ContentPanel>
 
 	{#if runs.length === 0}
 		<p class="text-sm text-base-content/70">No runs yet.</p>

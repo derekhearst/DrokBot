@@ -1,0 +1,43 @@
+<script lang="ts">
+	import type { Snippet } from 'svelte';
+
+	let {
+		header,
+		actions,
+		children,
+		compact = false,
+		flush = false,
+		bare = false,
+		class: className = '',
+	}: {
+		header?: Snippet;
+		actions?: Snippet;
+		children?: Snippet;
+		compact?: boolean;
+		flush?: boolean;
+		bare?: boolean;
+		class?: string;
+	} = $props();
+
+	const hasBar = $derived(!!header || !!actions);
+</script>
+
+<section
+	class="{bare ? 'flex h-full flex-col' : `rounded-2xl border border-base-300 bg-base-100 ${compact ? 'p-3' : 'p-4'}`} {className}"
+>
+	{#if hasBar}
+		<div class="flex flex-wrap items-center justify-between gap-2">
+			{#if header}
+				<div>{@render header()}</div>
+			{/if}
+			{#if actions}
+				<div class="flex items-center gap-2">{@render actions()}</div>
+			{/if}
+		</div>
+	{/if}
+	{#if children}
+		<div class={hasBar && !flush ? 'mt-3' : ''} class:flex-1={bare} class:overflow-y-auto={bare}>
+			{@render children()}
+		</div>
+	{/if}
+</section>

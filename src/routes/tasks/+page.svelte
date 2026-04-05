@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { getAgentChoices, runSchedulerTickCommand } from '$lib/agents';
 	import { listTasks, setTaskPriority, setTaskStatus } from '$lib/tasks';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type TaskRow = Awaited<ReturnType<typeof listTasks>>[number];
 	type AgentChoice = Awaited<ReturnType<typeof getAgentChoices>>[number];
@@ -51,18 +52,18 @@
 </script>
 
 <section class="space-y-4">
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Tasks</h1>
 				<p class="text-sm text-base-content/70">Kanban view for agent work queue and review stages.</p>
 			</div>
-			<div class="flex items-center gap-2">
-				<span class="text-xs text-base-content/70">agents {agents.length}</span>
-				<button class="btn btn-outline" type="button" onclick={runTick} disabled={busy}>Run Scheduler Tick</button>
-			</div>
-		</div>
-	</header>
+		{/snippet}
+		{#snippet actions()}
+			<span class="text-xs text-base-content/70">agents {agents.length}</span>
+			<button class="btn btn-outline" type="button" onclick={runTick} disabled={busy}>Run Scheduler Tick</button>
+		{/snippet}
+	</ContentPanel>
 
 	<div class="grid gap-3 xl:grid-cols-6">
 		{#each columns as status (status)}

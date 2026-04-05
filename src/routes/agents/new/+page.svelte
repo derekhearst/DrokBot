@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { createAgent } from '$lib/agents';
 	import ModelSelector from '$lib/components/ui/ModelSelector.svelte';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	let name = $state('');
 	let role = $state('Research and implementation specialist');
@@ -34,10 +35,14 @@
 
 <section class="space-y-4">
 	<a class="btn btn-sm btn-ghost" href="/agents">Back to agents</a>
-	<header>
-		<h1 class="text-3xl font-bold">Create Agent</h1>
-		<p class="text-sm text-base-content/70">Define role, model, and operating prompt.</p>
-	</header>
+	<ContentPanel>
+		{#snippet header()}
+			<div>
+				<h1 class="text-3xl font-bold">Create Agent</h1>
+				<p class="text-sm text-base-content/70">Define role, model, and operating prompt.</p>
+			</div>
+		{/snippet}
+	</ContentPanel>
 
 	<form
 		class="space-y-3 rounded-2xl border border-base-300 bg-base-100 p-4"

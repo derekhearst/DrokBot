@@ -13,12 +13,10 @@ export type LlmMessage = {
 }
 
 function toChatMessages(messages: LlmMessage[]) {
-	return messages
-		.filter((message) => message.role !== 'tool')
-		.map((message) => ({
-			role: message.role,
-			content: message.content,
-		})) as Array<{ role: 'system' | 'user' | 'assistant'; content: MessageContent }>
+	return messages.map((message) => ({
+		role: message.role,
+		content: message.content,
+	})) as Array<{ role: ChatRole; content: MessageContent }>
 }
 
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4'
@@ -79,7 +77,11 @@ export async function chat(messages: LlmMessage[], model = DEFAULT_MODEL) {
 	}
 }
 
-export async function streamChat(messages: LlmMessage[], model = DEFAULT_MODEL) {
+export async function streamChat(
+	messages: LlmMessage[],
+	model = DEFAULT_MODEL,
+	tools?: Array<{ type: string; function: { name: string; description: string; parameters: Record<string, unknown> } }>,
+) {
 	if (MOCK_EXTERNALS) {
 		const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.content ?? 'mock prompt'
 		const content = `MOCK_STREAM: ${lastUserMessage.slice(0, 120)}`
@@ -105,6 +107,7 @@ export async function streamChat(messages: LlmMessage[], model = DEFAULT_MODEL) 
 			model,
 			messages: chatMessages as never,
 			stream: true,
+			...(tools && tools.length > 0 ? { tools: tools as never } : {}),
 		},
 	})
 }

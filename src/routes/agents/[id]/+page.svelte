@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { createTask, delegateTask, getAgent, getAgentChoices, runTaskNow, updateAgentStatus } from '$lib/agents';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	const agentId = $derived(page.params.id ?? '');
 	let data = $state<Awaited<ReturnType<typeof getAgent>> | null>(null);
@@ -85,34 +86,34 @@
 {:else}
 	<section class="space-y-4">
 		<a class="btn btn-sm btn-ghost" href="/agents">Back to agents</a>
-		<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<div class="flex flex-wrap items-start justify-between gap-3">
+		<ContentPanel>
+			{#snippet header()}
 				<div>
-					<h1 class="text-2xl font-bold">{data.agent.name}</h1>
-					<p class="text-sm text-base-content/70">{data.agent.role}</p>
+					<h1 class="text-2xl font-bold">{data?.agent.name}</h1>
+					<p class="text-sm text-base-content/70">{data?.agent.role}</p>
+					<p class="mt-2 text-xs text-base-content/70">Status: {data?.agent.status}</p>
 				</div>
-				<div class="flex flex-wrap gap-1">
-					<button class="btn btn-xs" type="button" onclick={() => changeStatus('active')}>Activate</button>
-					<button class="btn btn-xs" type="button" onclick={() => changeStatus('idle')}>Idle</button>
-					<button class="btn btn-xs btn-warning" type="button" onclick={() => changeStatus('paused')}>Pause</button>
-					<a class="btn btn-xs btn-outline" href="/agents/{agentId}/runs">Run History</a>
-				</div>
-			</div>
-			<p class="mt-2 text-xs text-base-content/70">Status: {data.agent.status}</p>
-		</header>
+			{/snippet}
+			{#snippet actions()}
+				<button class="btn btn-xs" type="button" onclick={() => changeStatus('active')}>Activate</button>
+				<button class="btn btn-xs" type="button" onclick={() => changeStatus('idle')}>Idle</button>
+				<button class="btn btn-xs btn-warning" type="button" onclick={() => changeStatus('paused')}>Pause</button>
+				<a class="btn btn-xs btn-outline" href="/agents/{agentId}/runs">Run History</a>
+			{/snippet}
+		</ContentPanel>
 
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Create Task</h2>
-			<div class="mt-2 grid gap-2">
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Create Task</h2>{/snippet}
+			<div class="grid gap-2">
 				<input class="input input-bordered" bind:value={title} placeholder="Task title" />
 				<textarea class="textarea textarea-bordered h-24" bind:value={description} placeholder="Task details"></textarea>
 				<button class="btn btn-primary" type="button" onclick={createAgentTaskAction} disabled={busy}>Queue Task</button>
 			</div>
-		</section>
+		</ContentPanel>
 
-		<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-			<h2 class="font-semibold">Delegate Task To Another Agent</h2>
-			<div class="mt-2 grid gap-2">
+		<ContentPanel>
+			{#snippet header()}<h2 class="font-semibold">Delegate Task To Another Agent</h2>{/snippet}
+			<div class="grid gap-2">
 				<select class="select select-bordered" bind:value={delegateAgentId}>
 					{#if agentChoices.length === 0}
 						<option value="">No other agents available</option>
@@ -127,12 +128,12 @@
 					Delegate
 				</button>
 			</div>
-		</section>
+		</ContentPanel>
 
 		<section class="grid gap-4 lg:grid-cols-2">
-			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Tasks</h2>
-				<div class="mt-2 space-y-2">
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Tasks</h2>{/snippet}
+				<div class="space-y-2">
 					{#if data.tasks.length === 0}
 						<p class="text-sm text-base-content/70">No tasks yet.</p>
 					{:else}
@@ -154,11 +155,11 @@
 						{/each}
 					{/if}
 				</div>
-			</div>
+			</ContentPanel>
 
-			<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
-				<h2 class="font-semibold">Run History</h2>
-				<div class="mt-2 space-y-2">
+			<ContentPanel>
+				{#snippet header()}<h2 class="font-semibold">Run History</h2>{/snippet}
+				<div class="space-y-2">
 					{#if data.runs.length === 0}
 						<p class="text-sm text-base-content/70">No runs yet.</p>
 					{:else}
@@ -173,7 +174,7 @@
 						{/each}
 					{/if}
 				</div>
-			</div>
+			</ContentPanel>
 		</section>
 	</section>
 {/if}

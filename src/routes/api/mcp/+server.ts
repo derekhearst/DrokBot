@@ -48,6 +48,9 @@ const toolDescriptions: Record<ToolName, string> = {
 	create_task: 'Create a new task for an available agent',
 	delegate_to_agent: 'Delegate a task to a specific agent',
 	image_generate: 'Generate an image from a text prompt',
+	artifact_create: 'Create a persistent artifact (document, code, config, diagram, etc.)',
+	artifact_update: 'Update the content of an existing artifact. Creates a new version automatically.',
+	artifact_storage_update: "Update a key in an artifact's persistent storage.",
 }
 
 function schemaToJsonSchema(name: ToolName) {
@@ -88,6 +91,53 @@ function schemaToJsonSchema(name: ToolName) {
 				size: { type: 'string', enum: ['256x256', '512x512', '1024x1024'], default: '1024x1024' },
 			},
 			required: ['prompt'],
+		},
+		artifact_create: {
+			type: 'object',
+			properties: {
+				type: {
+					type: 'string',
+					enum: [
+						'document',
+						'code',
+						'config',
+						'image',
+						'svg',
+						'html',
+						'diagram',
+						'data_table',
+						'audio',
+						'video',
+						'mermaid',
+						'svelte',
+					],
+				},
+				title: { type: 'string' },
+				content: { type: 'string' },
+				language: { type: 'string' },
+				category: { type: 'string' },
+				tags: { type: 'array', items: { type: 'string' } },
+			},
+			required: ['type', 'title', 'content'],
+		},
+		artifact_update: {
+			type: 'object',
+			properties: {
+				artifactId: { type: 'string' },
+				content: { type: 'string' },
+				title: { type: 'string' },
+				language: { type: 'string' },
+			},
+			required: ['artifactId', 'content'],
+		},
+		artifact_storage_update: {
+			type: 'object',
+			properties: {
+				artifactId: { type: 'string' },
+				key: { type: 'string' },
+				value: {},
+			},
+			required: ['artifactId', 'key', 'value'],
 		},
 	}
 	return schemas[name] ?? { type: 'object' }

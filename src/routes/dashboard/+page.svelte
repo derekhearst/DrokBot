@@ -3,6 +3,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getDashboardSummary } from '$lib/dashboard';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
 
@@ -34,6 +35,7 @@
 					{ label: 'Agents', value: summary.metrics.agentCount, href: '/agents' },
 					{ label: 'Tasks', value: summary.metrics.taskCount, href: '/tasks' },
 					{ label: 'Memories', value: summary.metrics.memoryCount, href: '/memory' },
+					{ label: 'Artifacts', value: summary.metrics.artifactCount, href: '/artifacts' },
 					{ label: 'Notifications', value: summary.metrics.notificationCount, href: '/settings' }
 				]
 			: []
@@ -41,14 +43,16 @@
 </script>
 
 <section class="space-y-4 pt-1">
-	<header class="rounded-3xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-3">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">DrokBot Dashboard</h1>
 				<p class="text-sm text-base-content/70">
 					Live system snapshot for chat, agents, memory, and workflow queues.
 				</p>
 			</div>
+		{/snippet}
+		{#snippet actions()}
 			<button class="btn btn-sm rounded-xl border-base-300 bg-base-200/70 hover:bg-base-200" type="button" onclick={load} disabled={loading} aria-label="Refresh dashboard">
 				{#if loading}
 					<span class="loading loading-spinner loading-xs" aria-hidden="true"></span>
@@ -62,8 +66,8 @@
 				{/if}
 				<span>{loading ? 'Refreshing' : 'Refresh'}</span>
 			</button>
-		</div>
-	</header>
+		{/snippet}
+	</ContentPanel>
 
 	{#if error}
 		<p class="rounded-2xl border border-error/40 bg-error/10 p-3 text-sm text-error">{error}</p>
@@ -88,9 +92,9 @@
 	</div>
 
 	<div class="grid gap-4 xl:grid-cols-2">
-		<section class="rounded-3xl border border-base-300 bg-base-100 p-4">
-			<h2 class="text-lg font-semibold">Task Status</h2>
-			<div class="mt-3 flex flex-wrap gap-2">
+		<ContentPanel>
+			{#snippet header()}<h2 class="text-lg font-semibold">Task Status</h2>{/snippet}
+			<div class="flex flex-wrap gap-2">
 				{#if summary?.tasksByStatus.length}
 					{#each summary.tasksByStatus as bucket (bucket.status)}
 						<span class="badge badge-outline px-3 py-3 text-sm">
@@ -101,11 +105,11 @@
 					<p class="text-sm text-base-content/70">No tasks yet.</p>
 				{/if}
 			</div>
-		</section>
+		</ContentPanel>
 
-		<section class="rounded-3xl border border-base-300 bg-base-100 p-4">
-			<h2 class="text-lg font-semibold">Recent Conversations</h2>
-			<div class="mt-3 space-y-2">
+		<ContentPanel>
+			{#snippet header()}<h2 class="text-lg font-semibold">Recent Conversations</h2>{/snippet}
+			<div class="space-y-2">
 				{#if summary?.recentConversations.length}
 					{#each summary.recentConversations as conversation (conversation.id)}
 						<a class="block rounded-2xl border border-base-300 bg-base-50 p-3 hover:border-primary/40" href={`/chat/${conversation.id}`}>
@@ -119,15 +123,13 @@
 					<p class="text-sm text-base-content/70">No conversations yet.</p>
 				{/if}
 			</div>
-		</section>
+		</ContentPanel>
 	</div>
 
-	<section class="rounded-3xl border border-base-300 bg-base-100 p-4">
-		<div class="flex items-center justify-between gap-3">
-			<h2 class="text-lg font-semibold">Recent Tasks</h2>
-			<a class="btn btn-sm btn-ghost" href="/tasks">Open Task Board</a>
-		</div>
-		<div class="mt-3 overflow-x-auto">
+	<ContentPanel>
+		{#snippet header()}<h2 class="text-lg font-semibold">Recent Tasks</h2>{/snippet}
+		{#snippet actions()}<a class="btn btn-sm btn-ghost" href="/tasks">Open Task Board</a>{/snippet}
+		<div class="overflow-x-auto">
 			<table class="table table-zebra">
 				<thead>
 					<tr>
@@ -159,5 +161,5 @@
 				</tbody>
 			</table>
 		</div>
-	</section>
+	</ContentPanel>
 </section>

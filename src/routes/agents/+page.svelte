@@ -10,6 +10,7 @@
 		schedulerSnapshot,
 		updateAgentStatus
 	} from '$lib/agents';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type AgentRow = Awaited<ReturnType<typeof listAgents>>[number];
 	type Snapshot = Awaited<ReturnType<typeof schedulerSnapshot>>;
@@ -60,19 +61,19 @@
 </script>
 
 <section class="space-y-4">
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Agents</h1>
 				<p class="text-sm text-base-content/70">Manage lifecycle and scheduling for autonomous workers.</p>
 			</div>
-			<div class="flex gap-2">
-				<button class="btn btn-outline" type="button" onclick={runTick} disabled={busy}>Run Scheduler Tick</button>
-				<button class="btn btn-outline" type="button" onclick={runDrain} disabled={busy}>Drain Queue</button>
-				<a class="btn btn-primary" href="/agents/new">New Agent</a>
-			</div>
-		</div>
-	</header>
+		{/snippet}
+		{#snippet actions()}
+			<button class="btn btn-outline" type="button" onclick={runTick} disabled={busy}>Run Scheduler Tick</button>
+			<button class="btn btn-outline" type="button" onclick={runDrain} disabled={busy}>Drain Queue</button>
+			<a class="btn btn-primary" href="/agents/new">New Agent</a>
+		{/snippet}
+	</ContentPanel>
 
 	{#if snapshot}
 		<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -86,12 +87,12 @@
 		</div>
 	{/if}
 
-	<section class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<h2 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Pending Queue</h2>
+	<ContentPanel>
+		{#snippet header()}<h2 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">Pending Queue</h2>{/snippet}
 		{#if queuePreview.length === 0}
-			<p class="mt-2 text-sm text-base-content/70">No pending tasks.</p>
+			<p class="text-sm text-base-content/70">No pending tasks.</p>
 		{:else}
-			<div class="mt-2 overflow-x-auto">
+			<div class="overflow-x-auto">
 				<table class="table table-sm">
 					<thead>
 						<tr>
@@ -112,7 +113,7 @@
 				</table>
 			</div>
 		{/if}
-	</section>
+	</ContentPanel>
 
 	<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
 		{#if agents.length === 0}

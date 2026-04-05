@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { listTasks, setTaskStatus, requestChanges } from '$lib/tasks';
 	import { approveChanges } from '$lib/tasks';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type TaskRow = Awaited<ReturnType<typeof listTasks>>[number];
 
@@ -107,17 +108,19 @@
 </script>
 
 <section class="space-y-4">
-	<header class="rounded-2xl border border-base-300 bg-base-100 p-4">
-		<div class="flex flex-wrap items-center justify-between gap-2">
+	<ContentPanel>
+		{#snippet header()}
 			<div>
 				<h1 class="text-3xl font-bold">Review Queue</h1>
 				<p class="text-sm text-base-content/70">
 					{remaining} task{remaining !== 1 ? 's' : ''} awaiting review
 				</p>
 			</div>
+		{/snippet}
+		{#snippet actions()}
 			<a class="btn btn-outline btn-sm" href="/tasks">Full Board</a>
-		</div>
-	</header>
+		{/snippet}
+	</ContentPanel>
 
 	{#if !current}
 		<div class="flex flex-col items-center gap-4 rounded-2xl border border-base-300 bg-base-100 p-12">

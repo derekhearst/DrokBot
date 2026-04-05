@@ -12,6 +12,7 @@
 		unpinMemoryCommand,
 		updateMemoryCommand
 	} from '$lib/memory';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	const memoryId = $derived(page.params.id ?? '');
 
@@ -94,31 +95,31 @@
 	{:else if !memory}
 		<p class="text-sm text-base-content/70">Memory not found.</p>
 	{:else}
-		<header class="rounded-3xl border border-base-300 bg-base-100 p-5">
-			<div class="flex flex-wrap items-start justify-between gap-3">
+		<ContentPanel>
+			{#snippet header()}
 				<div class="space-y-1">
 					<h1 class="text-2xl font-bold">Memory Detail</h1>
-					<p class="whitespace-pre-wrap text-sm">{memory.content}</p>
+					<p class="whitespace-pre-wrap text-sm">{memory?.content}</p>
 					<div class="flex flex-wrap gap-2 text-xs text-base-content/70">
-						<span class="badge badge-outline">{memory.category}</span>
-						<span>importance {memory.importance.toFixed(2)}</span>
-						<span>accesses {memory.accessCount}</span>
+						<span class="badge badge-outline">{memory?.category}</span>
+						<span>importance {memory?.importance.toFixed(2)}</span>
+						<span>accesses {memory?.accessCount}</span>
 					</div>
 				</div>
-				<div class="flex flex-wrap gap-2">
-					<button class="btn btn-sm" type="button" onclick={handlePinToggle}>
-						{memory.category === 'pinned' || memory.category.startsWith('pinned:') ? 'Unpin' : 'Pin'}
-					</button>
-					<button class="btn btn-sm btn-outline" type="button" onclick={handleEditContent}>Edit Content</button>
-					<button class="btn btn-sm btn-outline" type="button" onclick={handleEditImportance}>Edit Importance</button>
-					<button class="btn btn-sm btn-error btn-outline" type="button" onclick={handleDelete}>Delete</button>
-				</div>
-			</div>
-		</header>
+			{/snippet}
+			{#snippet actions()}
+				<button class="btn btn-sm" type="button" onclick={handlePinToggle}>
+					{memory?.category === 'pinned' || memory?.category.startsWith('pinned:') ? 'Unpin' : 'Pin'}
+				</button>
+				<button class="btn btn-sm btn-outline" type="button" onclick={handleEditContent}>Edit Content</button>
+				<button class="btn btn-sm btn-outline" type="button" onclick={handleEditImportance}>Edit Importance</button>
+				<button class="btn btn-sm btn-error btn-outline" type="button" onclick={handleDelete}>Delete</button>
+			{/snippet}
+		</ContentPanel>
 
 		<div class="grid gap-4 lg:grid-cols-2">
-			<section class="rounded-3xl border border-base-300 bg-base-100 p-4">
-				<h2 class="mb-3 text-lg font-semibold">Relation Graph</h2>
+			<ContentPanel>
+				{#snippet header()}<h2 class="mb-3 text-lg font-semibold">Relation Graph</h2>{/snippet}
 				{#if relations.length === 0}
 					<p class="text-sm text-base-content/70">No explicit relation edges yet.</p>
 				{:else}
@@ -138,10 +139,10 @@
 						{/each}
 					</div>
 				{/if}
-			</section>
+			</ContentPanel>
 
-			<section class="rounded-3xl border border-base-300 bg-base-100 p-4">
-				<h2 class="mb-3 text-lg font-semibold">Related Memories</h2>
+			<ContentPanel>
+				{#snippet header()}<h2 class="mb-3 text-lg font-semibold">Related Memories</h2>{/snippet}
 				{#if related.length === 0}
 					<p class="text-sm text-base-content/70">No related memories found yet.</p>
 				{:else}
@@ -156,7 +157,7 @@
 						{/each}
 					</div>
 				{/if}
-			</section>
+			</ContentPanel>
 		</div>
 	{/if}
 </section>
