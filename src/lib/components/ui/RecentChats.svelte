@@ -122,19 +122,19 @@
 
 <ContentPanel bare compact flush>
 	{#snippet header()}
-		<div class="w-full space-y-2 pb-3">
-			<div class="flex flex-wrap items-center justify-between gap-2">
-				<div>
-					<h1 class="text-xl font-bold sm:text-3xl">Chats</h1>
-					<p class="text-xs text-base-content/70 sm:text-sm">Recent conversations</p>
+		<div class="w-full space-y-3 pb-3">
+			<div class="flex items-center justify-between gap-2">
+				<h1 class="text-xl font-bold sm:text-2xl">Chats</h1>
+				<div class="join" role="group" aria-label="Group chats">
+					<button
+						class="join-item btn btn-xs {groupMode === 'date' ? 'btn-primary' : 'btn-ghost'}"
+						onclick={() => (groupMode = 'date')}
+					>Date</button>
+					<button
+						class="join-item btn btn-xs {groupMode === 'category' ? 'btn-primary' : 'btn-ghost'}"
+						onclick={() => (groupMode = 'category')}
+					>Category</button>
 				</div>
-				<label class="flex items-center gap-2 text-xs text-base-content/60">
-					<span>Group</span>
-					<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
-						<option value="date">Date</option>
-						<option value="category">Category</option>
-					</select>
-				</label>
 			</div>
 			<input
 				type="text"
@@ -146,13 +146,13 @@
 		</div>
 	{/snippet}
 
-	<div class="mt-3 space-y-4">
+	<div class="mt-3 space-y-5">
 		{#if conversations.length === 0}
 			<p class="py-6 text-center text-sm text-base-content/40">No conversations yet</p>
 		{:else}
 			{#each grouped as group (group.label)}
 				<div>
-					<p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-base-content/40">{group.label}</p>
+					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
 					<div class="space-y-1">
 						{#each group.items as conversation (conversation.id)}
 							<a

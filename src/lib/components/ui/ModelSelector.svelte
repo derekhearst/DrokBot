@@ -11,6 +11,7 @@
 		variant?: 'default' | 'inline'
 		showChevron?: boolean
 		showBrowseBadge?: boolean
+		requireInputModality?: string
 	}
 
 	let {
@@ -21,6 +22,7 @@
 		variant = 'default',
 		showChevron = true,
 		showBrowseBadge = true,
+		requireInputModality,
 	}: Props = $props()
 
 	let models: ModelInfo[] = $state.raw([])
@@ -147,6 +149,10 @@
 
 	const filtered = $derived.by(() => {
 		let result = models
+
+		if (requireInputModality) {
+			result = result.filter((m) => (m.inputModalities ?? []).includes(requireInputModality))
+		}
 
 		if (search.trim()) {
 			const lower = search.toLowerCase()

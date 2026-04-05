@@ -5,6 +5,7 @@ export const appSettings = pgTable('app_settings', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
 	defaultModel: text('default_model').notNull().default('anthropic/claude-sonnet-4'),
+	transcriptionModel: text('transcription_model').notNull().default('google/gemini-2.5-flash'),
 	notificationPrefs: jsonb('notification_prefs')
 		.$type<{
 			taskCompleted: boolean

@@ -1,13 +1,15 @@
 import { env } from '$env/dynamic/private'
 import { json, error } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-
-const TRANSCRIPTION_MODEL = 'google/gemini-2.5-flash'
+import { getOrCreateSettings } from '$lib/settings/settings'
 
 export const POST: RequestHandler = async ({ request }) => {
 	if (!env.OPENROUTER_API_KEY) {
 		throw error(500, 'OPENROUTER_API_KEY is not set')
 	}
+
+	const settings = await getOrCreateSettings()
+	const transcriptionModel = settings.transcriptionModel ?? 'google/gemini-2.5-flash'
 
 	const formData = await request.formData()
 	const audioFile = formData.get('audio')
@@ -31,7 +33,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			'Content-Type': 'application/json',
 		},
 		body: JSON.stringify({
-			model: TRANSCRIPTION_MODEL,
+			model: transcriptionModel,
 			messages: [
 				{
 					role: 'user',

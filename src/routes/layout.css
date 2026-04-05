@@ -189,6 +189,21 @@ body::after {
 	letter-spacing: 0.02em;
 }
 
+/* Chat tray scrim */
+.chat-tray-scrim {
+	background: oklch(0% 0 0 / 0.35);
+	backdrop-filter: blur(2px);
+	cursor: default;
+	border: none;
+}
+
+/* Chat tray panel */
+.chat-tray {
+	box-shadow:
+		0 -8px 32px oklch(0% 0 0 / 0.3),
+		0 -2px 8px oklch(0% 0 0 / 0.15);
+}
+
 @keyframes ambient-shift {
 	0% {
 		background-position:

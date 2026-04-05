@@ -8,6 +8,8 @@
 		deleteSkillCommand,
 		toggleSkillEnabledCommand
 	} from '$lib/skills';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
+	import { skillsPanel } from '$lib/skills/panel.svelte';
 
 	type SkillRow = Awaited<ReturnType<typeof listSkillsQuery>>[number];
 
@@ -97,31 +99,39 @@
 	}
 </script>
 
-<div class="mx-auto max-w-4xl space-y-4 p-4 sm:p-6">
-	<!-- Header -->
-	<div class="flex items-center justify-between gap-3">
-		<div>
-			<h1 class="text-2xl font-bold">Skills</h1>
-			<p class="text-sm opacity-60">Reusable instruction & knowledge bundles for the LLM</p>
-		</div>
-		<button class="btn btn-primary btn-sm" onclick={openCreateModal}>+ New Skill</button>
-	</div>
+<div class="flex h-full min-h-0 flex-col space-y-3 sm:space-y-4">
+	<ContentPanel>
+		{#snippet header()}
+			<div>
+				<h1 class="text-xl font-bold sm:text-3xl">Skills</h1>
+				<p class="text-xs text-base-content/70 sm:text-sm">
+					{skills.length} {skills.length === 1 ? 'skill' : 'skills'} &middot; Reusable instruction bundles for the LLM
+				</p>
+			</div>
+		{/snippet}
+		{#snippet actions()}
+			<button class="btn btn-sm btn-primary sm:btn-md" onclick={openCreateModal}>+ New Skill</button>
+			<button
+				class="btn btn-sm btn-outline gap-1.5 sm:btn-md lg:hidden"
+				type="button"
+				onclick={() => (skillsPanel.open = true)}
+			>
+				Stats
+				<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7" /></svg>
+			</button>
+		{/snippet}
+	</ContentPanel>
 
 	<!-- Search -->
-	<label class="input input-bordered input-sm flex items-center gap-2">
-		<svg xmlns="http://www.w3.org/2000/svg" class="size-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-		</svg>
-		<input
-			type="text"
-			class="grow"
-			placeholder="Search skills..."
-			bind:value={search}
-			oninput={handleSearchInput}
-		/>
-	</label>
+	<input
+		class="input input-bordered input-sm w-full shrink-0"
+		bind:value={search}
+		oninput={handleSearchInput}
+		placeholder="Search skills..."
+	/>
 
-	<!-- Skill list -->
+	<!-- Skill list (scrollable) -->
+	<div class="min-h-0 flex-1 overflow-y-auto rounded-xl bg-base-200/40 px-3 sm:px-4">
 	{#if skills.length === 0}
 		<div class="flex flex-col items-center gap-2 py-16 opacity-50">
 			<svg xmlns="http://www.w3.org/2000/svg" class="size-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -177,6 +187,7 @@
 			{/each}
 		</div>
 	{/if}
+	</div>
 </div>
 
 <!-- Create skill dialog -->

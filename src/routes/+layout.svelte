@@ -12,6 +12,8 @@
 	import MobileNav from '$lib/components/ui/MobileNav.svelte';
 	import PromptPreviewPanel from '$lib/components/ui/PromptPreviewPanel.svelte';
 	import { dreamPanel } from '$lib/memory/panel.svelte';
+	import SkillStats from '$lib/components/ui/SkillStats.svelte';
+	import { skillsPanel } from '$lib/skills/panel.svelte';
 
 	let { children } = $props();
 	let mobileSidebarOpen = $state(false);
@@ -21,9 +23,10 @@
 	const isChatRoute = $derived(page.url.pathname.startsWith('/chat'));
 	const isMemoryRoute = $derived(page.url.pathname.startsWith('/memory'));
 	const isSettingsRoute = $derived(page.url.pathname.startsWith('/settings'));
+	const isSkillsRoute = $derived(page.url.pathname.startsWith('/skills'));
 	const isChatOrHome = $derived(isChatRoute || page.url.pathname === '/');
 	const showRecentChats = $derived(isChatRoute || page.url.pathname === '/');
-	const showAside = $derived(showRecentChats || isMemoryRoute || isSettingsRoute);
+	const showAside = $derived(showRecentChats || isMemoryRoute || isSettingsRoute || isSkillsRoute);
 
 	if (browser) {
 		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -147,7 +150,7 @@
 
 		<div class="drawer-content relative flex h-screen flex-col overflow-hidden">
 			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 sm:gap-4 sm:p-4 xl:p-6 {showAside ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}">
-				<main class="flex min-h-0 flex-col overflow-y-auto p-2 sm:rounded-3xl sm:border sm:border-base-300 sm:bg-base-100/85 sm:p-4 sm:shadow-sm xl:p-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
+				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 sm:rounded-3xl sm:border sm:border-base-300 sm:bg-base-100/85 sm:p-4 sm:shadow-sm xl:p-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
 					{@render children()}
 				</main>
 
@@ -158,6 +161,10 @@
 				{:else if isMemoryRoute}
 					<SidePanel bind:open={dreamPanel.open}>
 						<DreamCycles />
+					</SidePanel>
+				{:else if isSkillsRoute}
+					<SidePanel bind:open={skillsPanel.open}>
+						<SkillStats />
 					</SidePanel>
 				{:else if isSettingsRoute}
 					<SidePanel>

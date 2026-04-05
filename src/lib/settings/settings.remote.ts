@@ -7,6 +7,7 @@ import { assembleContext } from '$lib/memory/context'
 
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),
+	transcriptionModel: z.string().trim().min(1).max(120).optional(),
 	theme: z.enum(['drokbot-night']).optional(),
 	notificationPrefs: z
 		.object({

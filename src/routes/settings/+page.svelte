@@ -41,7 +41,7 @@
 	const searchLower = $derived(searchQuery.toLowerCase().trim());
 
 	const sections = [
-		{ id: 'model', keywords: 'model ai default tool approval dream aggressiveness frequency auto run' },
+		{ id: 'model', keywords: 'model ai default transcription voice audio tool approval dream aggressiveness frequency auto run' },
 		{ id: 'prompt', keywords: 'system prompt custom instructions' },
 		{ id: 'context', keywords: 'context window reserved response compact threshold' },
 		{ id: 'notifications', keywords: 'notification task completed needs input dream summary agent errors' },
@@ -94,6 +94,7 @@
 		try {
 			const updated = await updateAppSettings({
 				defaultModel: settings.defaultModel,
+				transcriptionModel: settings.transcriptionModel,
 				theme: 'drokbot-night',
 				notificationPrefs: settings.notificationPrefs,
 				dreamConfig: settings.dreamConfig,
@@ -305,6 +306,26 @@
 							showBrowseBadge={false}
 							onchange={(id: string) => {
 								if (settings) settings.defaultModel = id;
+							}}
+						/>
+					</div>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Transcription Model -->
+				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
+					<div>
+						<p class="text-sm font-medium">Transcription Model</p>
+						<p class="mt-0.5 text-xs text-base-content/40">Model for voice-to-text (must support audio input)</p>
+					</div>
+					<div class="w-full sm:w-64">
+						<ModelSelector
+							value={settings.transcriptionModel}
+							showChevron={false}
+							showBrowseBadge={false}
+							requireInputModality="audio"
+							onchange={(id: string) => {
+								if (settings) settings.transcriptionModel = id;
 							}}
 						/>
 					</div>

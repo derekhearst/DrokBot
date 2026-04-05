@@ -4,6 +4,7 @@ import { appSettings } from '$lib/settings/settings.schema'
 
 export const DEFAULT_SETTINGS = {
 	defaultModel: 'anthropic/claude-sonnet-4',
+	transcriptionModel: 'google/gemini-2.5-flash',
 	notificationPrefs: {
 		taskCompleted: true,
 		needsInput: true,
@@ -38,6 +39,7 @@ export async function getOrCreateSettings() {
 		.insert(appSettings)
 		.values({
 			defaultModel: DEFAULT_SETTINGS.defaultModel,
+			transcriptionModel: DEFAULT_SETTINGS.transcriptionModel,
 			notificationPrefs: DEFAULT_SETTINGS.notificationPrefs,
 			dreamConfig: DEFAULT_SETTINGS.dreamConfig,
 			contextConfig: DEFAULT_SETTINGS.contextConfig,
@@ -52,6 +54,7 @@ export async function getOrCreateSettings() {
 
 export async function updateSettings(input: {
 	defaultModel?: string
+	transcriptionModel?: string
 	theme?: string
 	notificationPrefs?: {
 		taskCompleted?: boolean
@@ -82,6 +85,7 @@ export async function updateSettings(input: {
 		.update(appSettings)
 		.set({
 			defaultModel: input.defaultModel ?? current.defaultModel,
+			transcriptionModel: input.transcriptionModel ?? current.transcriptionModel,
 			theme: 'drokbot-night',
 			notificationPrefs: {
 				...current.notificationPrefs,

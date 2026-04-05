@@ -110,76 +110,9 @@
 	}
 </script>
 
-{#if expanded}
-	<!-- Expanded session view -->
-	<div class="flex min-h-0 flex-1 flex-col px-2 pt-4 sm:px-0 lg:hidden" in:fly={{ y: 60, duration: 350, easing: cubicOut }} out:fade={{ duration: 180 }}>
-		<div class="mx-auto flex w-full max-w-2xl flex-1 flex-col space-y-3 overflow-hidden">
-			<!-- Sticky header -->
-			<div class="shrink-0 space-y-3">
-				<div class="flex items-center gap-3">
-					<button
-						type="button"
-						class="btn btn-sm btn-primary gap-1.5 rounded-xl"
-					onclick={async () => { expanded = false; search = ''; await tick(); document.querySelector<HTMLTextAreaElement>('.chat-composer-transition textarea')?.focus(); }}
-					>
-						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-						</svg>
-						New chat
-					</button>
-					<h1 class="flex-1 text-lg font-semibold">All chats</h1>
-					<label class="flex items-center gap-2 text-xs text-base-content/60">
-						<span>Group</span>
-						<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
-							<option value="date">Date</option>
-							<option value="category">Category</option>
-						</select>
-					</label>
-				</div>
-
-				<input
-					type="text"
-					class="input input-bordered input-sm w-full"
-					placeholder="Search chats…"
-					bind:value={search}
-					aria-label="Search chats"
-				/>
-			</div>
-
-			<!-- Scrollable list -->
-			<div class="min-h-0 flex-1 space-y-4 overflow-y-auto pb-20">
-				{#if filtered.length === 0}
-					<p class="py-6 text-center text-sm text-base-content/40">
-						{search ? 'No matches' : 'No conversations yet'}
-					</p>
-				{:else}
-					{#each grouped as group (group.label)}
-						<div>
-							<p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-base-content/40">{group.label}</p>
-							<div class="space-y-0.5">
-								{#each group.items as chat (chat.id)}
-									<a
-										href={`/chat/${chat.id}`}
-										class="chat-list-item block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
-									>
-										<span class="line-clamp-1 font-medium">{chat.title}</span>
-										<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
-											{chat.lastMessage ?? 'No messages yet'}
-										</span>
-									</a>
-								{/each}
-							</div>
-						</div>
-					{/each}
-				{/if}
-			</div>
-		</div>
-	</div>
-{/if}
-
-{#if !expanded}
-<!-- Default new-chat view -->
-<div class="flex flex-1 flex-col items-center px-2 pt-12 sm:justify-center sm:px-0 sm:pt-0" in:fade={{ duration: 250, delay: 80 }} out:scale={{ start: 0.97, duration: 200, opacity: 0 }}>
+<div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+<!-- Default new-chat view (always rendered) -->
+<div class="flex flex-1 flex-col items-center px-2 pt-12 sm:justify-center sm:px-0 sm:pt-0">
 	<div class="w-full max-w-2xl space-y-4 text-center sm:space-y-8">
 		<!-- Greeting -->
 		<div>
@@ -237,4 +170,90 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Chat tray — slides up from bottom, overlays the content -->
+{#if expanded}
+	<!-- Scrim -->
+	<button
+		type="button"
+		class="chat-tray-scrim fixed inset-0 z-10"
+		onclick={() => { expanded = false; search = ''; }}
+		aria-label="Close chat list"
+		transition:fade={{ duration: 200 }}
+	></button>
+
+	<!-- Tray panel -->
+	<div
+		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl sm:rounded-t-3xl xl:pb-0 lg:hidden"
+		transition:fly={{ y: 400, duration: 380, easing: cubicOut }}
+	>
+		<!-- Drag handle -->
+		<div class="flex shrink-0 justify-center pb-1 pt-3">
+			<div class="h-1 w-10 rounded-full bg-base-content/20"></div>
+		</div>
+
+		<!-- Header -->
+		<div class="shrink-0 space-y-3 px-4 pb-3">
+			<div class="flex items-center gap-3">
+				<button
+					type="button"
+					class="btn btn-sm btn-primary gap-1.5 rounded-xl"
+					onclick={async () => { expanded = false; search = ''; await tick(); document.querySelector<HTMLTextAreaElement>('.chat-composer-transition textarea')?.focus(); }}
+				>
+					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+					</svg>
+					New chat
+				</button>
+				<h2 class="flex-1 text-lg font-semibold">All chats</h2>
+				<div class="join" role="group" aria-label="Group chats">
+					<button
+						class="join-item btn btn-xs {groupMode === 'date' ? 'btn-primary' : 'btn-ghost'}"
+						onclick={() => (groupMode = 'date')}
+					>Date</button>
+					<button
+						class="join-item btn btn-xs {groupMode === 'category' ? 'btn-primary' : 'btn-ghost'}"
+						onclick={() => (groupMode = 'category')}
+					>Category</button>
+				</div>
+			</div>
+
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search chats…"
+				bind:value={search}
+				aria-label="Search chats"
+			/>
+		</div>
+
+		<!-- Scrollable list -->
+		<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6">
+			{#if filtered.length === 0}
+				<p class="py-6 text-center text-sm text-base-content/40">
+					{search ? 'No matches' : 'No conversations yet'}
+				</p>
+			{:else}
+				{#each grouped as group (group.label)}
+					<div>
+						<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
+						<div class="space-y-0.5">
+							{#each group.items as chat (chat.id)}
+								<a
+									href={`/chat/${chat.id}`}
+									class="chat-list-item block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
+								>
+									<span class="line-clamp-1 font-medium">{chat.title}</span>
+									<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
+										{chat.lastMessage ?? 'No messages yet'}
+									</span>
+								</a>
+							{/each}
+						</div>
+					</div>
+				{/each}
+			{/if}
+		</div>
+	</div>
 {/if}
+</div>
