@@ -23,6 +23,10 @@ export const DEFAULT_SETTINGS = {
 		reservedResponsePct: 30,
 		autoCompactThresholdPct: 72,
 	},
+	toolConfig: {
+		approvalMode: 'auto' as const,
+	},
+	systemPrompt: '',
 	theme: 'drokbot-night',
 } as const
 
@@ -37,6 +41,8 @@ export async function getOrCreateSettings() {
 			notificationPrefs: DEFAULT_SETTINGS.notificationPrefs,
 			dreamConfig: DEFAULT_SETTINGS.dreamConfig,
 			contextConfig: DEFAULT_SETTINGS.contextConfig,
+			toolConfig: DEFAULT_SETTINGS.toolConfig,
+			systemPrompt: DEFAULT_SETTINGS.systemPrompt,
 			theme: DEFAULT_SETTINGS.theme,
 			updatedAt: new Date(),
 		})
@@ -66,6 +72,10 @@ export async function updateSettings(input: {
 		reservedResponsePct?: number
 		autoCompactThresholdPct?: number
 	}
+	toolConfig?: {
+		approvalMode?: 'auto' | 'confirm'
+	}
+	systemPrompt?: string
 }) {
 	const current = await getOrCreateSettings()
 	const [updated] = await db
@@ -90,6 +100,11 @@ export async function updateSettings(input: {
 					DEFAULT_SETTINGS.contextConfig),
 				...(input.contextConfig ?? {}),
 			},
+			toolConfig: {
+				...((current.toolConfig as typeof DEFAULT_SETTINGS.toolConfig | undefined) ?? DEFAULT_SETTINGS.toolConfig),
+				...(input.toolConfig ?? {}),
+			},
+			systemPrompt: input.systemPrompt ?? current.systemPrompt,
 			updatedAt: new Date(),
 		})
 		.where(eq(appSettings.id, current.id))
@@ -113,6 +128,8 @@ export async function resetSettings() {
 			dreamConfig: DEFAULT_SETTINGS.dreamConfig,
 			budgetConfig: DEFAULT_SETTINGS.budgetConfig,
 			contextConfig: DEFAULT_SETTINGS.contextConfig,
+			toolConfig: DEFAULT_SETTINGS.toolConfig,
+			systemPrompt: DEFAULT_SETTINGS.systemPrompt,
 			updatedAt: new Date(),
 		})
 		.where(eq(appSettings.id, existing.id))

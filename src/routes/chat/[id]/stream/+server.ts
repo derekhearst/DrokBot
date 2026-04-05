@@ -11,6 +11,9 @@ import { generateTitle } from '$lib/chat/titlegen'
 import { emitActivity } from '$lib/activity/emit'
 import { executeTool, getToolDefinitions, type ToolName, type ToolCallWithContext } from '$lib/llm/tools'
 import { logLlmUsage } from '$lib/llm/usage'
+import { getOrCreateSettings } from '$lib/settings/settings'
+import { requestApproval } from '$lib/llm/tool-approval'
+import { listSkillSummaries } from '$lib/skills/store'
 
 const encoder = new TextEncoder()
 
@@ -134,6 +137,21 @@ export const POST: RequestHandler = async ({ request }) => {
 For short answers, explanations, and conversational responses, reply with inline text as normal. When creating artifacts, always set an appropriate type and descriptive title.`,
 	})
 
+	// Skills awareness
+	const skillSummaries = await listSkillSummaries()
+	if (skillSummaries.length > 0) {
+		const skillList = skillSummaries
+			.map((s) => {
+				const fileNames = s.files.map((f) => f.name).join(', ')
+				return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
+			})
+			.join('\n')
+		llmMessages.unshift({
+			role: 'system',
+			content: `Available skills (use read_skill tool to load full content when relevant):\n${skillList}`,
+		})
+	}
+
 	const startedAt = Date.now()
 	let firstTokenAt: number | null = null
 	let assistantContent = ''
@@ -142,6 +160,9 @@ For short answers, explanations, and conversational responses, reply with inline
 
 	const tools = getToolDefinitions()
 	const MAX_TOOL_ROUNDS = 3
+
+	const currentSettings = await getOrCreateSettings()
+	const toolApprovalMode = (currentSettings.toolConfig as { approvalMode?: string } | undefined)?.approvalMode ?? 'auto'
 
 	const readable = new ReadableStream<Uint8Array>({
 		async start(controller) {
@@ -216,6 +237,36 @@ For short answers, explanations, and conversational responses, reply with inline
 							parsedArgs = JSON.parse(tc.arguments)
 						} catch {
 							// Bad JSON — skip
+						}
+
+						// If approval mode is 'confirm', pause and wait for user decision
+						if (toolApprovalMode === 'confirm') {
+							const approvalToken = crypto.randomUUID()
+							controller.enqueue(
+								sse('tool_pending', {
+									token: approvalToken,
+									id: tc.id,
+									name: tc.name,
+									arguments: tc.arguments,
+								}),
+							)
+							const approved = await requestApproval(approvalToken)
+							if (!approved) {
+								controller.enqueue(
+									sse('tool_denied', {
+										id: tc.id,
+										name: tc.name,
+									}),
+								)
+								allToolCalls.push({
+									name: tc.name,
+									arguments: parsedArgs,
+									result: { denied: true },
+									executionMs: 0,
+								})
+								toolResults.push({ call_id: tc.id, name: tc.name, result: 'Tool execution was denied by user.' })
+								continue
+							}
 						}
 
 						controller.enqueue(

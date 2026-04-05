@@ -16,6 +16,7 @@ export type ModelInfo = {
 	maxCompletionTokens?: number | null
 	isModerated?: boolean | null
 	supportedParameters?: string[]
+	createdAt?: number | null
 }
 
 let cachedModels: ModelInfo[] | null = null
@@ -44,6 +45,7 @@ export async function listModels(): Promise<ModelInfo[]> {
 				maxCompletionTokens: 8192,
 				isModerated: true,
 				supportedParameters: ['temperature', 'max_tokens', 'tools'],
+				createdAt: 1717200000,
 			},
 			{
 				id: 'anthropic/claude-opus-4',
@@ -60,6 +62,7 @@ export async function listModels(): Promise<ModelInfo[]> {
 				maxCompletionTokens: 8192,
 				isModerated: true,
 				supportedParameters: ['temperature', 'max_tokens', 'tools'],
+				createdAt: 1717200000,
 			},
 			{
 				id: 'openai/gpt-4o-mini',
@@ -76,6 +79,7 @@ export async function listModels(): Promise<ModelInfo[]> {
 				maxCompletionTokens: 4096,
 				isModerated: true,
 				supportedParameters: ['temperature', 'max_tokens', 'tools'],
+				createdAt: 1717200000,
 			},
 		]
 	}
@@ -94,6 +98,7 @@ export async function listModels(): Promise<ModelInfo[]> {
 				name: string
 				description?: string | null
 				contextLength?: number | null
+				created?: number | null
 				pricing?: { prompt?: string; completion?: string }
 				architecture?: {
 					modality?: string | null
@@ -106,13 +111,16 @@ export async function listModels(): Promise<ModelInfo[]> {
 				supportedParameters?: string[]
 			}
 
+			const promptPrice = Math.max(0, parseFloat(m.pricing?.prompt ?? '0') || 0)
+			const completionPrice = Math.max(0, parseFloat(m.pricing?.completion ?? '0') || 0)
+
 			return {
 				id: m.id,
 				name: m.name,
 				description: m.description ?? null,
 				contextLength: m.contextLength ?? null,
-				promptPrice: m.pricing?.prompt ?? '0',
-				completionPrice: m.pricing?.completion ?? '0',
+				promptPrice: promptPrice.toString(),
+				completionPrice: completionPrice.toString(),
 				modality: m.architecture?.modality ?? null,
 				inputModalities: m.architecture?.inputModalities ?? [],
 				outputModalities: m.architecture?.outputModalities ?? [],
@@ -121,6 +129,7 @@ export async function listModels(): Promise<ModelInfo[]> {
 				maxCompletionTokens: m.topProvider?.maxCompletionTokens ?? null,
 				isModerated: m.topProvider?.isModerated ?? null,
 				supportedParameters: m.supportedParameters ?? [],
+				createdAt: m.created ?? null,
 			}
 		})
 		.sort((a, b) => a.name.localeCompare(b.name))

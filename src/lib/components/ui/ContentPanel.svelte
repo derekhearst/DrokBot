@@ -23,12 +23,12 @@
 </script>
 
 <section
-	class="{bare ? 'flex h-full flex-col' : `rounded-2xl border border-base-300 bg-base-100 ${compact ? 'p-3' : 'p-4'}`} {className}"
+	class="{bare ? 'flex h-full flex-col' : `rounded-xl border border-base-300 bg-base-100 sm:rounded-2xl ${compact ? 'p-2 sm:p-3' : 'p-2.5 sm:p-4'}`} {className}"
 >
 	{#if hasBar}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			{#if header}
-				<div>{@render header()}</div>
+				<div class="min-w-0 flex-1">{@render header()}</div>
 			{/if}
 			{#if actions}
 				<div class="flex items-center gap-2">{@render actions()}</div>

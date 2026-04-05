@@ -101,6 +101,17 @@
 				</svg>
 				Artifacts
 			</a>
+			<a href="/skills"
+				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class:bg-base-200={isActive('/skills')} class:font-medium={isActive('/skills')} class:text-primary={isActive('/skills')}
+				onclick={onNavigate}>
+				<!-- academic-cap / skill -->
+				<svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+					<path d="M6 12v5c0 1.66 2.69 3 6 3s6-1.34 6-3v-5"/>
+				</svg>
+				Skills
+			</a>
 		</div>
 
 		<!-- Insights group -->

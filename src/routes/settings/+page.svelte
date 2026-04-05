@@ -14,6 +14,7 @@
 	} from '$lib/notifications';
 	import { getSettings, resetAppSettings, updateAppSettings } from '$lib/settings';
 	import ModelSelector from '$lib/components/ui/ModelSelector.svelte';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
 
 	type NotificationRow = Awaited<ReturnType<typeof listNotificationFeed>>[number];
 	type SubscriptionRow = Awaited<ReturnType<typeof listSubscriptions>>[number];
@@ -35,6 +36,25 @@
 	let testUrl = $state('/tasks');
 	let statusMessage = $state('');
 	let settings = $state<SettingsRow | null>(null);
+	let searchQuery = $state('');
+
+	const searchLower = $derived(searchQuery.toLowerCase().trim());
+
+	const sections = [
+		{ id: 'model', keywords: 'model ai default tool approval dream aggressiveness frequency auto run' },
+		{ id: 'prompt', keywords: 'system prompt custom instructions' },
+		{ id: 'context', keywords: 'context window reserved response compact threshold' },
+		{ id: 'notifications', keywords: 'notification task completed needs input dream summary agent errors' },
+		{ id: 'budget', keywords: 'budget daily monthly limit cost' },
+		{ id: 'app', keywords: 'app push install pwa notifications subscribe' },
+		{ id: 'devtools', keywords: 'developer tools test notification feed debug' },
+	] as const;
+
+	function isVisible(id: (typeof sections)[number]['id']) {
+		if (!searchLower) return true;
+		const section = sections.find((s) => s.id === id);
+		return section ? section.keywords.includes(searchLower) : true;
+	}
 
 	onMount(() => {
 		void refresh();
@@ -79,6 +99,8 @@
 				dreamConfig: settings.dreamConfig,
 				budgetConfig: settings.budgetConfig,
 				contextConfig: settings.contextConfig,
+				toolConfig: settings.toolConfig,
+				systemPrompt: settings.systemPrompt,
 			});
 			settings = updated;
 			applyTheme('drokbot-night');
@@ -220,26 +242,63 @@
 	}
 </script>
 
-<div class="mx-auto max-w-2xl space-y-10 pb-24">
-	<!-- ─── Title ─── -->
-	<h1 class="text-2xl font-bold tracking-tight">Settings</h1>
+<section class="flex min-h-full flex-col">
+	<!-- ─── Fixed Header ─── -->
+	<ContentPanel>
+		{#snippet header()}
+			<div class="min-w-0">
+				<h1 class="text-xl font-bold sm:text-3xl">Settings</h1>
+				<p class="text-xs text-base-content/70 sm:text-sm">
+					{#if statusMessage}
+						<span class="text-success">{statusMessage}</span>
+					{:else}
+						Configure models, prompts, notifications, and system behavior.
+					{/if}
+				</p>
+			</div>
+		{/snippet}
+		{#snippet actions()}
+			<button class="btn btn-ghost btn-sm" type="button" onclick={resetSettingsToDefault} disabled={busy}>Reset</button>
+			<button class="btn btn-primary btn-sm" type="button" onclick={saveSettings} disabled={busy}>
+				{#if busy}
+					<span class="loading loading-spinner loading-xs"></span>
+				{/if}
+				Save
+			</button>
+		{/snippet}
+	</ContentPanel>
+
+	<!-- ─── Search (fixed below header) ─── -->
+	<div class="mt-2 mb-1 px-1 sm:px-0">
+		<input
+			type="text"
+			class="input input-bordered input-sm w-full"
+			placeholder="Search settings…"
+			bind:value={searchQuery}
+		/>
+	</div>
+
+	<!-- ─── Scrollable Settings ─── -->
+	<div class="mt-2 min-h-0 flex-1 overflow-y-auto">
+	<div class="mx-auto max-w-2xl space-y-6 px-1 pb-6 sm:space-y-10 sm:px-0">
 
 	{#if settings}
 		<!-- ════════════════════════════════════════════════
 		     MODEL & AI
 		     ════════════════════════════════════════════════ -->
+		{#if isVisible('model')}
 		<section>
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>Model & AI
 			</p>
-			<div class="rounded-xl bg-base-200/40 px-4">
+			<div class="rounded-xl bg-base-200/40 px-3 sm:px-4">
 				<!-- Default Model -->
-				<div class="flex items-center justify-between gap-4 py-3.5">
+				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
 					<div>
 						<p class="text-sm font-medium">Default Model</p>
 						<p class="mt-0.5 text-xs text-base-content/40">Primary model for new conversations</p>
 					</div>
-					<div class="w-64">
+					<div class="w-full sm:w-64">
 						<ModelSelector
 							value={settings.defaultModel}
 							showChevron={false}
@@ -249,6 +308,30 @@
 							}}
 						/>
 					</div>
+				</div>
+				<div class="border-t border-base-content/[.06]"></div>
+
+				<!-- Tool Approval Mode -->
+				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
+					<div>
+						<p class="text-sm font-medium">Tool Approval</p>
+						<p class="mt-0.5 text-xs text-base-content/40">Require permission before the agent runs tools</p>
+					</div>
+					<select
+						class="select select-bordered select-sm w-full sm:w-40"
+						value={settings.toolConfig?.approvalMode ?? 'auto'}
+						onchange={(e) => {
+							if (!settings) return;
+							const mode = (e.currentTarget as HTMLSelectElement).value as 'auto' | 'confirm';
+							settings = {
+								...settings,
+								toolConfig: { ...settings.toolConfig, approvalMode: mode },
+							};
+						}}
+					>
+						<option value="auto">Auto-approve</option>
+						<option value="confirm">Ask every time</option>
+					</select>
 				</div>
 				<div class="border-t border-base-content/[.06]"></div>
 
@@ -304,9 +387,42 @@
 			</div>
 		</section>
 
+		{/if}
+
+		<!-- ════════════════════════════════════════════════
+		     SYSTEM PROMPT
+		     ════════════════════════════════════════════════ -->
+		{#if isVisible('prompt')}
+		<section>
+			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>System Prompt
+			</p>
+			<div class="rounded-xl bg-base-200/40 px-3 sm:px-4">
+				<div class="py-3.5">
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium">Custom System Prompt</p>
+							<p class="mt-0.5 text-xs text-base-content/40">Prepended to every chat conversation. Leave empty to use defaults only.</p>
+						</div>
+					</div>
+					<textarea
+						class="textarea textarea-bordered mt-3 w-full font-mono text-xs leading-relaxed"
+						rows="6"
+						maxlength="12000"
+						placeholder="e.g. You are DrokBot, a helpful AI assistant with access to tools..."
+						bind:value={settings.systemPrompt}
+					></textarea>
+					<p class="mt-1 text-right text-[10px] text-base-content/30">{settings.systemPrompt?.length ?? 0} / 12000</p>
+				</div>
+			</div>
+		</section>
+
+		{/if}
+
 		<!-- ════════════════════════════════════════════════
 		     CONTEXT WINDOW
 		     ════════════════════════════════════════════════ -->
+		{#if isVisible('context')}
 		<section>
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Context Window
@@ -349,9 +465,12 @@
 			</div>
 		</section>
 
+		{/if}
+
 		<!-- ════════════════════════════════════════════════
 		     NOTIFICATIONS
 		     ════════════════════════════════════════════════ -->
+		{#if isVisible('notifications')}
 		<section>
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent"></span>Notifications
@@ -379,9 +498,12 @@
 			</div>
 		</section>
 
+		{/if}
+
 		<!-- ════════════════════════════════════════════════
 		     BUDGET
 		     ════════════════════════════════════════════════ -->
+		{#if isVisible('budget')}
 		<section>
 			<p class="mb-1.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-warning"></span>Budget
@@ -429,11 +551,13 @@
 				</div>
 			</div>
 		</section>
+		{/if}
 	{/if}
 
 	<!-- ════════════════════════════════════════════════
 	     APP & PUSH
 	     ════════════════════════════════════════════════ -->
+	{#if isVisible('app')}
 	<section>
 		<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-info"></span>App & Push
@@ -475,14 +599,16 @@
 		</div>
 	</section>
 
+	{/if}
+
 	<!-- ════════════════════════════════════════════════
-	     DEVELOPER TOOLS  (collapsible)
+	     DEVELOPER TOOLS
 	     ════════════════════════════════════════════════ -->
-	<details class="group">
-		<summary class="mb-3 flex cursor-pointer items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40 select-none">
+	{#if isVisible('devtools')}
+	<section>
+		<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-error"></span>Developer Tools
-			<svg class="ml-auto h-3.5 w-3.5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7" /></svg>
-		</summary>
+		</p>
 		<div class="space-y-3">
 			<!-- Test Notification -->
 			<div class="rounded-xl bg-base-200/40 px-4 py-3.5">
@@ -519,12 +645,15 @@
 				{/if}
 			</div>
 		</div>
-	</details>
+	</section>
 
 	<!-- ════════════════════════════════════════════════
 	     STICKY SAVE BAR
 	     ════════════════════════════════════════════════ -->
-	<div class="sticky bottom-0 -mx-4 flex items-center justify-between rounded-t-xl border-t border-base-content/[.06] bg-base-100/80 px-5 py-3 backdrop-blur-xl sm:-mx-6">
+	</div><!-- end max-w-2xl -->
+	</div><!-- end flex-1 -->
+
+	<div class="sticky bottom-0 -mx-2 mt-4 flex items-center justify-between bg-base-100/90 px-4 py-3 backdrop-blur-xl sm:-mx-4 sm:px-6 xl:-mx-6">
 		{#if statusMessage}
 			<p class="text-sm font-medium text-success">{statusMessage}</p>
 		{:else}
@@ -540,4 +669,4 @@
 			</button>
 		</div>
 	</div>
-</div>
+</section>

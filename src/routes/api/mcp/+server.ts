@@ -46,11 +46,20 @@ const toolDescriptions: Record<ToolName, string> = {
 	browser_screenshot: 'Take a screenshot of a web page',
 	memory_search: 'Search through stored memories using semantic similarity',
 	create_task: 'Create a new task for an available agent',
-	delegate_to_agent: 'Delegate a task to a specific agent',
+	run_subagent: 'Run a general-purpose stateless subagent to handle a task',
 	image_generate: 'Generate an image from a text prompt',
 	artifact_create: 'Create a persistent artifact (document, code, config, diagram, etc.)',
 	artifact_update: 'Update the content of an existing artifact. Creates a new version automatically.',
 	artifact_storage_update: "Update a key in an artifact's persistent storage.",
+	list_skills: 'List all available skills with their names and descriptions.',
+	read_skill: 'Read a skill by name. Returns main content and available nested files.',
+	read_skill_file: 'Read a specific nested file within a skill.',
+	create_skill: 'Create a new skill with a name, description, and main content.',
+	update_skill: 'Update an existing skill by name.',
+	add_skill_file: 'Add a nested file to an existing skill.',
+	update_skill_file: 'Update a nested file within a skill.',
+	delete_skill: 'Delete a skill and all its nested files.',
+	delete_skill_file: 'Delete a specific nested file from a skill.',
 }
 
 function schemaToJsonSchema(name: ToolName) {
@@ -78,10 +87,10 @@ function schemaToJsonSchema(name: ToolName) {
 			properties: { title: { type: 'string' }, description: { type: 'string' } },
 			required: ['title', 'description'],
 		},
-		delegate_to_agent: {
+		run_subagent: {
 			type: 'object',
-			properties: { agentId: { type: 'string' }, task: { type: 'string' } },
-			required: ['agentId', 'task'],
+			properties: { task: { type: 'string' }, context: { type: 'string' } },
+			required: ['task'],
 		},
 		image_generate: {
 			type: 'object',
@@ -138,6 +147,39 @@ function schemaToJsonSchema(name: ToolName) {
 				value: {},
 			},
 			required: ['artifactId', 'key', 'value'],
+		},
+		list_skills: { type: 'object', properties: {} },
+		read_skill: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
+		read_skill_file: {
+			type: 'object',
+			properties: { skillName: { type: 'string' }, fileName: { type: 'string' } },
+			required: ['skillName', 'fileName'],
+		},
+		create_skill: {
+			type: 'object',
+			properties: { name: { type: 'string' }, description: { type: 'string' }, content: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } },
+			required: ['name', 'description', 'content'],
+		},
+		update_skill: {
+			type: 'object',
+			properties: { name: { type: 'string' }, description: { type: 'string' }, content: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } } },
+			required: ['name'],
+		},
+		add_skill_file: {
+			type: 'object',
+			properties: { skillName: { type: 'string' }, fileName: { type: 'string' }, description: { type: 'string' }, content: { type: 'string' } },
+			required: ['skillName', 'fileName', 'content'],
+		},
+		update_skill_file: {
+			type: 'object',
+			properties: { skillName: { type: 'string' }, fileName: { type: 'string' }, content: { type: 'string' }, description: { type: 'string' } },
+			required: ['skillName', 'fileName'],
+		},
+		delete_skill: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] },
+		delete_skill_file: {
+			type: 'object',
+			properties: { skillName: { type: 'string' }, fileName: { type: 'string' } },
+			required: ['skillName', 'fileName'],
 		},
 	}
 	return schemas[name] ?? { type: 'object' }

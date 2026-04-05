@@ -75,7 +75,7 @@
 
 <article class={`chat-message w-full ${isUser ? 'chat chat-end' : ''}`}>
 	{#if isUser}
-		<div class="chat-bubble chat-bubble-primary max-w-[90%]">
+		<div class="max-w-[90%] rounded-2xl border-2 border-primary bg-base-100/60 px-4 py-3">
 			{#if editing}
 				<textarea class="textarea textarea-bordered w-full" bind:value={draft}></textarea>
 				<div class="mt-2 flex gap-2">

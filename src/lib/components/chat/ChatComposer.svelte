@@ -6,6 +6,8 @@
 		busy = false,
 		model = 'anthropic/claude-sonnet-4',
 		placeholder = 'Message DrokBot...',
+		recording = false,
+		speechSupported = false,
 		onSubmit,
 		onModelChange,
 		onCancelGeneration,
@@ -17,6 +19,8 @@
 		busy?: boolean
 		model?: string
 		placeholder?: string
+		recording?: boolean
+		speechSupported?: boolean
 		onSubmit?: ((content: string) => Promise<void> | void) | undefined
 		onModelChange?: ((modelId: string) => Promise<void> | void) | undefined
 		onCancelGeneration?: (() => Promise<void> | void) | undefined
@@ -40,9 +44,9 @@
 	}
 </script>
 
-<form onsubmit={submit} class="rounded-3xl border border-base-300 bg-base-100 p-3 shadow-sm {className}">
+<form onsubmit={submit} class="rounded-2xl border border-base-300 bg-base-100 p-2 shadow-sm sm:rounded-3xl sm:p-3 {className}">
 	<textarea
-		class="w-full resize-none border-none bg-transparent px-2 py-1 text-base leading-6 outline-none focus:outline-none"
+		class="w-full resize-none border-none bg-transparent px-1.5 py-1 text-base leading-6 outline-none focus:outline-none sm:px-2"
 		rows="2"
 		placeholder={placeholder}
 		bind:value
@@ -50,36 +54,53 @@
 		disabled={busy}
 	></textarea>
 
-	<div class="mt-2 flex items-center justify-between gap-2 px-1">
+	<div class="mt-1.5 flex items-center justify-between gap-1 px-0.5 sm:mt-2 sm:gap-2 sm:px-1">
 		<div class="flex items-center gap-1">
 			<button
 				type="button"
-				class="btn btn-ghost btn-sm gap-2 rounded-full"
+				class="btn btn-ghost btn-sm gap-1 rounded-full px-2 sm:gap-2"
 				disabled={busy}
 				onclick={() => onAddFiles?.()}
 			>
 				<span class="text-lg leading-none">+</span>
-				<span>Add files</span>
+				<span class="hidden sm:inline">Add files</span>
 			</button>
 		</div>
 
 		<div class="flex items-center gap-1">
-			<ModelSelector
-				value={model}
-				variant="inline"
-				size="sm"
-				onchange={(id: string) => onModelChange?.(id)}
-			/>
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm btn-circle"
-				aria-label="Voice input"
-				title="Voice input"
-				disabled={busy}
-				onclick={() => onMicClick?.()}
-			>
-				🎤
-			</button>
+			<div>
+				<ModelSelector
+					value={model}
+					variant="inline"
+					size="xs"
+					showChevron={false}
+					onchange={(id: string) => onModelChange?.(id)}
+				/>
+			</div>
+			{#if speechSupported}
+				<div class="relative flex items-center justify-center">
+					{#if recording}
+						<span class="mic-ripple absolute h-8 w-8 rounded-full border-2 border-error" style="animation-delay: 0s"></span>
+						<span class="mic-ripple absolute h-8 w-8 rounded-full border-2 border-error" style="animation-delay: 0.4s"></span>
+						<span class="mic-ripple absolute h-8 w-8 rounded-full border-2 border-error" style="animation-delay: 0.8s"></span>
+					{/if}
+					<button
+						type="button"
+						class="btn btn-sm btn-circle relative z-10 transition-colors duration-200 {recording ? 'btn-error text-error-content mic-pulse' : 'btn-ghost'}"
+						aria-label={recording ? 'Stop recording' : 'Voice input'}
+						title={recording ? 'Stop recording' : 'Voice input'}
+						disabled={busy}
+						onclick={() => onMicClick?.()}
+					>
+						<svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<rect x="9" y="2" width="6" height="12" rx="3"></rect>
+							<path d="M5 10a7 7 0 0 0 14 0"></path>
+							<line x1="12" y1="17" x2="12" y2="22"></line>
+							<line x1="8" y1="22" x2="16" y2="22"></line>
+						</svg>
+					</button>
+				</div>
+			{/if}
 			{#if busy}
 				<button
 					type="button"
@@ -107,3 +128,34 @@
 		</div>
 	</div>
 </form>
+
+<style>
+	@keyframes mic-ripple {
+		0% {
+			transform: scale(1);
+			opacity: 0.6;
+		}
+		100% {
+			transform: scale(2.5);
+			opacity: 0;
+		}
+	}
+
+	@keyframes mic-pulse {
+		0%, 100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.1);
+		}
+	}
+
+	:global(.mic-ripple) {
+		animation: mic-ripple 1.5s ease-out infinite;
+		pointer-events: none;
+	}
+
+	:global(.mic-pulse) {
+		animation: mic-pulse 1s ease-in-out infinite;
+	}
+</style>

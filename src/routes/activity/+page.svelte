@@ -21,6 +21,7 @@
 		{ value: 'dream_cycle', label: 'Dream Cycle' },
 		{ value: 'chat_started', label: 'Chat' },
 		{ value: 'review_action', label: 'Review' },
+		{ value: 'skill_created', label: 'Skill' },
 	];
 
 	onMount(() => {

@@ -2,11 +2,23 @@ import { z } from 'zod'
 import { webSearch } from '$lib/tools/search'
 import { browserNavigate, browserScreenshot, execCode, execShell, readFile, writeFile } from '$lib/tools/sandbox'
 import { searchMemories } from '$lib/memory/store'
-import { createTaskForAvailableAgent, delegateTaskToAgent } from '$lib/agents/engine'
+import { runSubagent } from '$lib/agents/subagent'
 import { generateImage } from '$lib/tools/imagegen'
 import { db } from '$lib/db.server'
 import { artifacts, artifactVersions } from '$lib/artifacts/artifacts.schema'
 import { eq, max } from 'drizzle-orm'
+import {
+	listSkillSummaries,
+	getSkillByName,
+	getSkillFileByName,
+	createSkill,
+	updateSkill as updateSkillRecord,
+	deleteSkill as deleteSkillRecord,
+	addSkillFile,
+	updateSkillFile as updateSkillFileRecord,
+	deleteSkillFile as deleteSkillFileRecord,
+	bumpSkillAccess,
+} from '$lib/skills/store'
 
 export const toolSchemas = {
 	web_search: z.object({ query: z.string().min(1) }),
@@ -16,7 +28,7 @@ export const toolSchemas = {
 	browser_screenshot: z.object({ url: z.string().url().optional() }),
 	memory_search: z.object({ query: z.string().min(1), limit: z.number().int().min(1).max(20).default(5) }),
 	create_task: z.object({ title: z.string().min(1), description: z.string().min(1) }),
-	delegate_to_agent: z.object({ agentId: z.string().uuid(), task: z.string().min(1) }),
+	run_subagent: z.object({ task: z.string().min(1), context: z.string().optional() }),
 	image_generate: z.object({
 		prompt: z.string().min(1).max(2000),
 		model: z.enum(['flux', 'sdxl', 'dall-e']).default('flux'),
@@ -52,6 +64,35 @@ export const toolSchemas = {
 		key: z.string().min(1).max(200),
 		value: z.unknown(),
 	}),
+	list_skills: z.object({}),
+	read_skill: z.object({ name: z.string().min(1) }),
+	read_skill_file: z.object({ skillName: z.string().min(1), fileName: z.string().min(1) }),
+	create_skill: z.object({
+		name: z.string().min(1).max(100),
+		description: z.string().min(1).max(500),
+		content: z.string().min(1),
+		tags: z.array(z.string()).optional(),
+	}),
+	update_skill: z.object({
+		name: z.string().min(1),
+		description: z.string().min(1).max(500).optional(),
+		content: z.string().min(1).optional(),
+		tags: z.array(z.string()).optional(),
+	}),
+	add_skill_file: z.object({
+		skillName: z.string().min(1),
+		fileName: z.string().min(1).max(200),
+		description: z.string().max(500).default(''),
+		content: z.string().min(1),
+	}),
+	update_skill_file: z.object({
+		skillName: z.string().min(1),
+		fileName: z.string().min(1),
+		content: z.string().min(1).optional(),
+		description: z.string().max(500).optional(),
+	}),
+	delete_skill: z.object({ name: z.string().min(1) }),
+	delete_skill_file: z.object({ skillName: z.string().min(1), fileName: z.string().min(1) }),
 }
 
 export type ToolName = keyof typeof toolSchemas
@@ -64,13 +105,27 @@ const toolDescriptions: Record<ToolName, string> = {
 	browser_screenshot: 'Take a screenshot of a web page.',
 	memory_search: 'Search persistent memory for relevant information.',
 	create_task: 'Create a new agent task.',
-	delegate_to_agent: 'Delegate a task to a specific agent.',
+	run_subagent:
+		'Run a general-purpose subagent to handle a task. The subagent is stateless and returns a result without persistence.',
 	image_generate: 'Generate an image from a text prompt.',
 	artifact_create:
 		'Create a persistent artifact (document, code, config, diagram, etc.). Use for code snippets over 15 lines, full documents, configs, diagrams, data tables, HTML pages, and Svelte components.',
 	artifact_update: 'Update the content of an existing artifact. Creates a new version automatically.',
 	artifact_storage_update:
 		"Update a key in an artifact's persistent storage. Used for reactive/living artifacts like trackers and dashboards.",
+	list_skills:
+		'List all available skills with their names, descriptions, and nested file names. Use this to discover what skills are available.',
+	read_skill:
+		'Read a skill by name. Returns the main content and a list of available nested files. Use this when a skill is relevant to the current task.',
+	read_skill_file: 'Read a specific nested file within a skill. Use after read_skill to load additional context files.',
+	create_skill:
+		'Create a new skill with a name, description, and main content. Skills are reusable instruction/knowledge bundles. Keep main content under 8KB.',
+	update_skill: 'Update an existing skill by name. Can modify description, content, or tags.',
+	add_skill_file:
+		'Add a nested file to an existing skill. Files provide optional additional context (e.g., examples, sub-topics).',
+	update_skill_file: 'Update a nested file within a skill by skill name and file name.',
+	delete_skill: 'Delete a skill and all its nested files by name.',
+	delete_skill_file: 'Delete a specific nested file from a skill.',
 }
 
 function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
@@ -170,6 +225,7 @@ export async function executeTool(call: ToolCall) {
 
 		if (call.name === 'create_task') {
 			const input = toolSchemas.create_task.parse(call.arguments)
+			const { createTaskForAvailableAgent } = await import('$lib/agents/engine')
 			const task = await createTaskForAvailableAgent(input.title, input.description)
 			return {
 				success: true,
@@ -289,13 +345,218 @@ export async function executeTool(call: ToolCall) {
 			}
 		}
 
-		const input = toolSchemas.delegate_to_agent.parse(call.arguments)
-		const delegated = await delegateTaskToAgent(input.agentId, input.task)
+		if (call.name === 'list_skills') {
+			const summaries = await listSkillSummaries()
+			return {
+				success: true,
+				tool: call.name,
+				input: {},
+				result: summaries,
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'read_skill') {
+			const input = toolSchemas.read_skill.parse(call.arguments)
+			const skill = await getSkillByName(input.name)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.name}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			await bumpSkillAccess(skill.id)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: {
+					name: skill.name,
+					description: skill.description,
+					content: skill.content,
+					tags: skill.tags,
+					files: skill.files.map((f) => ({ name: f.name, description: f.description })),
+				},
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'read_skill_file') {
+			const input = toolSchemas.read_skill_file.parse(call.arguments)
+			const skill = await getSkillByName(input.skillName)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.skillName}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const file = await getSkillFileByName(skill.id, input.fileName)
+			if (!file) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			await bumpSkillAccess(skill.id)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { name: file.name, description: file.description, content: file.content },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'create_skill') {
+			const input = toolSchemas.create_skill.parse(call.arguments)
+			const skill = await createSkill(input.name, input.description, input.content, input.tags)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { id: skill.id, name: skill.name },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'update_skill') {
+			const input = toolSchemas.update_skill.parse(call.arguments)
+			const skill = await getSkillByName(input.name)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.name}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const { name: _name, ...fields } = input
+			const updated = await updateSkillRecord(skill.id, fields)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { id: updated.id, name: updated.name },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'add_skill_file') {
+			const input = toolSchemas.add_skill_file.parse(call.arguments)
+			const skill = await getSkillByName(input.skillName)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.skillName}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const file = await addSkillFile(skill.id, input.fileName, input.description, input.content)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { fileId: file.id, name: file.name },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'update_skill_file') {
+			const input = toolSchemas.update_skill_file.parse(call.arguments)
+			const skill = await getSkillByName(input.skillName)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.skillName}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const file = await getSkillFileByName(skill.id, input.fileName)
+			if (!file) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const { skillName: _s, fileName: _f, ...fields } = input
+			const updated = await updateSkillFileRecord(file.id, fields)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { fileId: updated.id, name: updated.name },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'delete_skill') {
+			const input = toolSchemas.delete_skill.parse(call.arguments)
+			const skill = await getSkillByName(input.name)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.name}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			await deleteSkillRecord(skill.id)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { deleted: input.name },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		if (call.name === 'delete_skill_file') {
+			const input = toolSchemas.delete_skill_file.parse(call.arguments)
+			const skill = await getSkillByName(input.skillName)
+			if (!skill) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `Skill "${input.skillName}" not found`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			const file = await getSkillFileByName(skill.id, input.fileName)
+			if (!file) {
+				return {
+					success: false,
+					tool: call.name,
+					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+			await deleteSkillFileRecord(file.id)
+			return {
+				success: true,
+				tool: call.name,
+				input,
+				result: { deleted: input.fileName, fromSkill: input.skillName },
+				executionMs: Date.now() - startedAt,
+			}
+		}
+
+		const input = toolSchemas.run_subagent.parse(call.arguments)
+		const result = await runSubagent(input.task, input.context)
 		return {
 			success: true,
 			tool: call.name,
 			input,
-			result: delegated,
+			result,
 			executionMs: Date.now() - startedAt,
 		}
 	} catch (error) {

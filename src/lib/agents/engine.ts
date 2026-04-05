@@ -3,9 +3,10 @@ import { z } from 'zod'
 import { db } from '$lib/db.server'
 import { agentRuns, agents, agentTasks } from '$lib/agents/agents.schema'
 import { chat } from '$lib/llm/openrouter'
-import { executeTool, type ToolCall, type ToolName } from '$lib/llm/tools'
+import { executeTool, toolSchemas, type ToolCall, type ToolName } from '$lib/llm/tools'
 import { logLlmUsage } from '$lib/llm/usage'
 import { emitActivity } from '$lib/activity/emit'
+import { listSkillSummaries } from '$lib/skills/store'
 
 type CreateAgentTaskInput = {
 	agentId: string
@@ -14,32 +15,18 @@ type CreateAgentTaskInput = {
 	priority?: number
 }
 
+const allToolNames = Object.keys(toolSchemas) as [string, ...string[]]
+
 const toolLoopSchema = z.object({
 	analysis: z.string().optional(),
 	toolCalls: z
 		.array(
 			z.object({
-				name: z.enum([
-					'web_search',
-					'code_execute',
-					'file_read',
-					'file_write',
-					'browser_screenshot',
-					'memory_search',
-					'create_task',
-					'delegate_to_agent',
-					'image_generate',
-				]),
+				name: z.enum(allToolNames),
 				arguments: z.record(z.string(), z.unknown()).default({}),
 			}),
 		)
 		.max(3)
-		.optional(),
-	delegate: z
-		.object({
-			agentId: z.string().uuid(),
-			task: z.string().min(1),
-		})
 		.optional(),
 	finalSummary: z.string().optional(),
 })
@@ -84,6 +71,18 @@ function classifyReviewType(execution: {
 }
 
 async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeof agentTasks.$inferSelect) {
+	const skillSummaries = await listSkillSummaries()
+	const skillContext =
+		skillSummaries.length > 0
+			? '\nAvailable skills (use read_skill tool to load full content when relevant):\n' +
+				skillSummaries
+					.map((s) => {
+						const fileNames = s.files.map((f) => f.name).join(', ')
+						return `- ${s.name}: ${s.description}${fileNames ? ` [files: ${fileNames}]` : ''}`
+					})
+					.join('\n')
+			: ''
+
 	const plannerResponse = await chat(
 		[
 			{
@@ -91,10 +90,13 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 				content: [
 					agent.systemPrompt,
 					`Your role: ${agent.role}`,
-					'You may request up to 3 tools and optionally delegate work.',
-					'Return strict JSON with keys: analysis, toolCalls, delegate, finalSummary.',
-					'Tool names: web_search, code_execute, file_read, file_write, browser_screenshot, memory_search, create_task, delegate_to_agent, image_generate.',
-				].join('\n'),
+					'You may request up to 3 tools and optionally run a subagent.',
+					'Return strict JSON with keys: analysis, toolCalls, finalSummary.',
+					`Tool names: ${allToolNames.join(', ')}.`,
+					skillContext,
+				]
+					.filter(Boolean)
+					.join('\n'),
 			},
 			{
 				role: 'user',
@@ -125,18 +127,11 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 		toolResults.push({ call: normalizedCall, result })
 	}
 
-	let delegatedTaskId: string | null = null
-	if (planned.delegate?.agentId && planned.delegate?.task) {
-		const delegated = await delegateTaskToAgent(planned.delegate.agentId, planned.delegate.task, task.id)
-		delegatedTaskId = delegated.taskId
-	}
-
 	if (toolResults.length === 0 && planned.finalSummary) {
 		return {
 			summary: planned.finalSummary,
 			usage: plannerResponse.usage ?? {},
 			toolResults,
-			delegatedTaskId,
 			totalCost: plannerCost,
 		}
 	}
@@ -148,7 +143,6 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 		`Tool results: ${JSON.stringify(
 			toolResults.map((entry) => ({ name: entry.call.name, success: entry.result.success, result: entry.result })),
 		)}`,
-		`Delegated task id: ${delegatedTaskId ?? 'none'}`,
 		'Produce concise execution summary and explicit next actions.',
 	].join('\n\n')
 
@@ -181,7 +175,6 @@ async function runToolLoopForTask(agent: typeof agents.$inferSelect, task: typeo
 			synthesis: synthesisResponse.usage ?? {},
 		},
 		toolResults,
-		delegatedTaskId,
 		totalCost: String(parseFloat(plannerCost) + parseFloat(synthesisCost)),
 	}
 }
@@ -307,7 +300,6 @@ export async function executeAgentTask(taskId: string) {
 				event: 'task_completed',
 				attempt,
 				toolCalls: execution.toolResults.length,
-				delegatedTaskId: execution.delegatedTaskId,
 				preview: execution.summary.slice(0, 240),
 			}
 
@@ -324,7 +316,6 @@ export async function executeAgentTask(taskId: string) {
 						summary: execution.summary,
 						usage: execution.usage,
 						toolResults: execution.toolResults,
-						delegatedTaskId: execution.delegatedTaskId,
 						attemptCount: attempt,
 						finishedAt: new Date().toISOString(),
 					},
@@ -354,7 +345,6 @@ export async function executeAgentTask(taskId: string) {
 				runId: run.id,
 				status: 'review' as const,
 				summary: execution.summary,
-				delegatedTaskId: execution.delegatedTaskId,
 			}
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error('Unknown task execution error')

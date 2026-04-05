@@ -42,8 +42,10 @@ export function calculateCost(
 	tokensOut: number,
 	pricing: { promptPrice: number; completionPrice: number },
 ): number {
-	// OpenRouter prices are per-token (not per-1K)
-	return tokensIn * pricing.promptPrice + tokensOut * pricing.completionPrice
+	// OpenRouter prices are per-token (not per-1K); clamp negatives to 0
+	const prompt = Math.max(0, pricing.promptPrice)
+	const completion = Math.max(0, pricing.completionPrice)
+	return tokensIn * prompt + tokensOut * completion
 }
 
 export async function logLlmUsage(input: LogInput): Promise<string> {

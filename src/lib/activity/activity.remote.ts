@@ -14,6 +14,7 @@ const listActivitySchema = z.object({
 			'dream_cycle',
 			'chat_started',
 			'review_action',
+			'skill_created',
 		])
 		.optional(),
 	limit: z.number().int().min(1).max(200).optional(),

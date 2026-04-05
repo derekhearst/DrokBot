@@ -39,17 +39,19 @@
 	]);
 </script>
 
-<details class="dropdown dropdown-end">
-	<summary
-		class="context-ring btn btn-ghost btn-circle h-9 min-h-0 w-9 rounded-full border border-base-300 p-0 text-[11px] font-semibold tabular-nums"
+<div class="dropdown dropdown-end dropdown-hover">
+	<div
+		tabindex="0"
+		role="button"
+		class="context-ring flex h-9 w-9 cursor-default items-center justify-center rounded-full border border-base-300 text-[11px] font-semibold tabular-nums"
 		style={`--ctx-fill:${ringDegrees}deg;`}
 		aria-label={`Context window usage ${pct}%`}
-		title={`${usedK}K / ${totalK}K tokens (${pct}%)`}
 	>
 		<span>{pct}%</span>
-	</summary>
+	</div>
 
-	<div class="dropdown-content z-30 mt-2 w-72 rounded-xl border border-base-300 bg-base-100/95 p-3 text-sm shadow-xl backdrop-blur">
+	<div tabindex="-1" class="dropdown-content z-30 w-72 px-2 pt-2">
+		<div class="rounded-xl border border-base-300 bg-base-100/95 p-3 text-sm shadow-xl backdrop-blur">
 		<h3 class="mb-1 text-base font-semibold">Context Window</h3>
 		<p class="font-mono text-xs opacity-80">{usedK}K / {totalK}K tokens</p>
 
@@ -131,14 +133,15 @@
 				Compact Conversation
 			</button>
 		{/if}
+		</div>
 	</div>
-</details>
+</div>
 
 <style>
 	.context-ring {
 		background:
-			conic-gradient(var(--color-primary) var(--ctx-fill), color-mix(in oklab, var(--color-base-300) 82%, transparent) 0deg),
-			radial-gradient(circle, var(--color-base-100) 62%, transparent 63%);
+			radial-gradient(circle, var(--color-base-100) 60%, transparent 61%),
+			conic-gradient(var(--color-primary) var(--ctx-fill), color-mix(in oklab, var(--color-base-300) 82%, transparent) 0deg);
 	}
 
 	.context-reserved {

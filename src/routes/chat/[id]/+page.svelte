@@ -15,7 +15,20 @@
 	import ChatInput from '$lib/components/chat/ChatInput.svelte';
 	import ContextWindow from '$lib/components/chat/ContextWindow.svelte';
 	import MessageBubble from '$lib/components/chat/MessageBubble.svelte';
+	import LiveToolCallCard from '$lib/components/chat/LiveToolCallCard.svelte';
 	import ArtifactPanel from '$lib/components/artifacts/ArtifactPanel.svelte';
+	import ContentPanel from '$lib/components/ui/ContentPanel.svelte';
+
+	type StreamingToolCall = {
+		id: string;
+		name: string;
+		arguments: string;
+		status: 'pending' | 'approved' | 'executing' | 'completed' | 'denied';
+		result?: string;
+		executionMs?: number | null;
+		expanded: boolean;
+		token?: string | null;
+	};
 
 	const conversationId = $derived(page.params.id ?? '');
 	let model = $state('anthropic/claude-sonnet-4');
@@ -28,6 +41,7 @@
 	let waitingForFirstToken = $state(false);
 	let streamAbortController = $state<AbortController | null>(null);
 	let stoppedByUser = $state(false);
+	let streamingToolCalls = $state<StreamingToolCall[]>([]);
 	let conversationData = $state<Awaited<ReturnType<typeof getConversation>> | null>(null);
 	let stats = $state<Awaited<ReturnType<typeof getMessageStats>>>([]);
 	let availableModels = $derived(await getAvailableModels());
@@ -285,6 +299,28 @@
 		streamAbortController.abort();
 	}
 
+	async function approveToolCall(token: string) {
+		await fetch(`/chat/${conversationId}/tool-approve`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ token, approved: true }),
+		});
+		streamingToolCalls = streamingToolCalls.map((tc) =>
+			tc.token === token ? { ...tc, status: 'approved' as const } : tc
+		);
+	}
+
+	async function denyToolCall(token: string) {
+		await fetch(`/chat/${conversationId}/tool-approve`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ token, approved: false }),
+		});
+		streamingToolCalls = streamingToolCalls.map((tc) =>
+			tc.token === token ? { ...tc, status: 'denied' as const } : tc
+		);
+	}
+
 	async function streamMessage(content: string, regenerate = false) {
 		if (!conversationId || streaming) return;
 
@@ -305,6 +341,7 @@
 		waitingForFirstToken = true;
 		streamAbortController = abortController;
 		stoppedByUser = false;
+		streamingToolCalls = [];
 		try {
 			const response = await fetch(`/chat/${conversationId}/stream`, {
 				method: 'POST',
@@ -339,7 +376,72 @@
 
 					if (eventName === 'delta') {
 						waitingForFirstToken = false;
+						// Collapse any expanded tool calls when text resumes
+						streamingToolCalls = streamingToolCalls.map((tc) => ({ ...tc, expanded: false }));
 						draftAssistant += payload.content ?? '';
+					}
+
+					if (eventName === 'tool_pending') {
+						waitingForFirstToken = false;
+						// Collapse previous, add new pending tool
+						streamingToolCalls = [
+							...streamingToolCalls.map((tc) => ({ ...tc, expanded: false })),
+							{
+								id: payload.id,
+								name: payload.name,
+								arguments: payload.arguments ?? '',
+								status: 'pending' as const,
+								expanded: true,
+								token: payload.token,
+							},
+						];
+					}
+
+					if (eventName === 'tool_call') {
+						waitingForFirstToken = false;
+						const existing = streamingToolCalls.find((tc) => tc.id === payload.id);
+						if (existing) {
+							// Update from pending → executing
+							streamingToolCalls = streamingToolCalls.map((tc) =>
+								tc.id === payload.id
+									? { ...tc, status: 'executing' as const, expanded: true }
+									: { ...tc, expanded: false }
+							);
+						} else {
+							// Auto-approve mode — tool_call arrives directly
+							streamingToolCalls = [
+								...streamingToolCalls.map((tc) => ({ ...tc, expanded: false })),
+								{
+									id: payload.id,
+									name: payload.name,
+									arguments: payload.arguments ?? '',
+									status: 'executing' as const,
+									expanded: true,
+									token: null,
+								},
+							];
+						}
+					}
+
+					if (eventName === 'tool_result') {
+						streamingToolCalls = streamingToolCalls.map((tc) =>
+							tc.name === payload.name && (tc.status === 'executing' || tc.status === 'approved')
+								? {
+										...tc,
+										status: 'completed' as const,
+										executionMs: payload.executionMs ?? null,
+										result: payload.success ? 'Success' : 'Failed',
+									}
+								: tc
+						);
+					}
+
+					if (eventName === 'tool_denied') {
+						streamingToolCalls = streamingToolCalls.map((tc) =>
+							tc.id === payload.id
+								? { ...tc, status: 'denied' as const, expanded: true }
+								: tc
+						);
 					}
 
 					if (eventName === 'artifact_created') {
@@ -387,6 +489,7 @@
 			waitingForFirstToken = false;
 			streamAbortController = null;
 			stoppedByUser = false;
+			streamingToolCalls = [];
 		}
 	}
 
@@ -437,26 +540,27 @@
 </script>
 
 <div class="flex min-h-0 w-full flex-1 gap-0" class:artifact-split={artifactPanelMode === 'panel'}>
-	<section class="flex min-h-0 flex-1 flex-col gap-1 pt-0 pb-1" class:max-w-full={artifactPanelMode !== 'panel'}>
+	<section class="flex min-h-0 flex-1 flex-col gap-1 px-1 pt-0 pb-1 sm:px-0" class:max-w-full={artifactPanelMode !== 'panel'}>
 		{#if !conversationData}
 			<div class="flex flex-1 items-center justify-center">
 				<span class="loading loading-spinner loading-sm opacity-50"></span>
 			</div>
 		{:else}
-			<!-- Inline floating top bar: title · model · context stats -->
-			<div class="flex shrink-0 items-center gap-2 px-0">
-				<h1 class="min-w-0 flex-1 truncate text-base font-semibold">
-					{conversationData.conversation.title}
-				</h1>
-				<ContextWindow
-					used={contextMetrics.used}
-					total={contextMetrics.total}
-					breakdown={contextMetrics.breakdown}
-					modelUsage={contextMetrics.modelUsage}
-					reservedTargetPct={reservedResponsePct}
-					onCompact={compactContext}
-				/>
-			</div>
+			<ContentPanel compact>
+				{#snippet header()}
+					<h1 class="text-base font-semibold sm:text-lg">{conversationData?.conversation.title ?? 'Chat'}</h1>
+				{/snippet}
+				{#snippet actions()}
+					<ContextWindow
+						used={contextMetrics.used}
+						total={contextMetrics.total}
+						breakdown={contextMetrics.breakdown}
+						modelUsage={contextMetrics.modelUsage}
+						reservedTargetPct={reservedResponsePct}
+						onCompact={compactContext}
+					/>
+				{/snippet}
+			</ContentPanel>
 
 			{#if modelSwitchNotice}
 				<div class="alert alert-info mt-1 mb-1 py-2 text-sm">
@@ -469,16 +573,48 @@
 					<MessageBubble {message} artifacts={conversationArtifacts} onEdit={handleEdit} onRegenerate={handleRegenerate} onOpenArtifact={openArtifact} />
 				{/each}
 
-				{#if waitingForFirstToken && streaming && !draftAssistant}
+				{#if waitingForFirstToken && streaming && !draftAssistant && streamingToolCalls.length === 0}
 					<article class="chat chat-start">
-						<div class="chat-bubble chat-bubble-neutral">
-							<span class="loading loading-dots loading-sm" aria-label="Assistant is generating a response"></span>
+						<div class="rounded-2xl bg-base-100/60 p-4">
+							<svg class="h-8 w-16" viewBox="0 0 80 32" aria-label="Assistant is generating a response">
+								<circle cx="16" cy="16" r="5" fill="currentColor" class="opacity-60">
+									<animate attributeName="r" values="5;7;5" dur="1.2s" repeatCount="indefinite" begin="0s" />
+									<animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" begin="0s" />
+								</circle>
+								<circle cx="40" cy="16" r="5" fill="currentColor" class="opacity-60">
+									<animate attributeName="r" values="5;7;5" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+									<animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+								</circle>
+								<circle cx="64" cy="16" r="5" fill="currentColor" class="opacity-60">
+									<animate attributeName="r" values="5;7;5" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+									<animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" begin="0.4s" />
+								</circle>
+							</svg>
 						</div>
 					</article>
-				{:else if draftAssistant && streaming}
-					<article class="chat chat-start">
-						<div class="chat-bubble chat-bubble-neutral whitespace-pre-wrap">{draftAssistant}</div>
-					</article>
+				{:else if streaming}
+					{#if draftAssistant}
+						<article class="chat chat-start">
+							<div class="assistant-message rounded-2xl bg-base-100/60 p-4 whitespace-pre-wrap">{draftAssistant}</div>
+						</article>
+					{/if}
+					{#if streamingToolCalls.length > 0}
+						<div class="w-full space-y-1.5 pl-1">
+							{#each streamingToolCalls as tc (tc.id)}
+								<LiveToolCallCard
+									name={tc.name}
+									argumentsText={tc.arguments}
+									result={tc.result ?? ''}
+									status={tc.status}
+									executionMs={tc.executionMs ?? null}
+									expanded={tc.expanded}
+									token={tc.token ?? null}
+									onApprove={approveToolCall}
+									onDeny={denyToolCall}
+								/>
+							{/each}
+						</div>
+					{/if}
 				{/if}
 			</div>
 

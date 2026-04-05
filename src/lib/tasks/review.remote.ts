@@ -1,9 +1,46 @@
 import { command, query } from '$app/server'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
+import { promisify } from 'node:util'
+import { execFile } from 'node:child_process'
 import { db } from '$lib/db.server'
 import { agentTasks } from '$lib/agents/agents.schema'
-import { discardBranch, getDiff, getFileChanges, mergeBranch } from '$lib/tools/git'
+
+const execFileAsync = promisify(execFile)
+
+async function runGit(args: string[], cwd = process.cwd()) {
+	const { stdout } = await execFileAsync('git', args, { cwd })
+	return stdout.trim()
+}
+
+async function getDiff(branch: string) {
+	try {
+		return await runGit(['diff', `main...${branch}`])
+	} catch {
+		return runGit(['diff', branch])
+	}
+}
+
+async function getFileChanges(branch: string) {
+	const raw = await runGit(['diff', '--name-status', `main...${branch}`])
+	return raw
+		.split('\n')
+		.filter(Boolean)
+		.map((line) => {
+			const [status, ...rest] = line.split(/\s+/)
+			return { status, path: rest.join(' ') }
+		})
+}
+
+async function mergeBranch(branch: string) {
+	await runGit(['checkout', 'main'])
+	await runGit(['merge', '--no-ff', branch, '-m', `Merge ${branch}`])
+}
+
+async function discardBranch(branch: string) {
+	await runGit(['checkout', 'main'])
+	await runGit(['branch', '-D', branch])
+}
 
 const taskIdSchema = z.string().uuid()
 

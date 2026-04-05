@@ -7,6 +7,7 @@
 
 	let conversations = $state<Conversation[]>([]);
 	let groupMode = $state<GroupMode>('date');
+	let search = $state('');
 
 	$effect(() => {
 		void loadConversations();
@@ -53,8 +54,18 @@
 		return `${y}-${m}-${day}`;
 	}
 
+	const filtered = $derived.by(() => {
+		const q = search.trim().toLowerCase();
+		if (!q) return conversations;
+		return conversations.filter(
+			(c) =>
+				c.title.toLowerCase().includes(q) ||
+				(c.lastMessage && c.lastMessage.toLowerCase().includes(q))
+		);
+	});
+
 	const grouped = $derived.by(() => {
-		const sorted = [...conversations].sort(
+		const sorted = [...filtered].sort(
 			(a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
 		);
 
@@ -111,16 +122,28 @@
 
 <ContentPanel bare compact flush>
 	{#snippet header()}
-		<h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-base-content/55">Chats</h2>
-	{/snippet}
-	{#snippet actions()}
-		<label class="flex items-center gap-2 text-xs text-base-content/60">
-			<span>Group</span>
-			<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
-				<option value="date">Date</option>
-				<option value="category">Category</option>
-			</select>
-		</label>
+		<div class="w-full space-y-2 pb-3">
+			<div class="flex flex-wrap items-center justify-between gap-2">
+				<div>
+					<h1 class="text-xl font-bold sm:text-3xl">Chats</h1>
+					<p class="text-xs text-base-content/70 sm:text-sm">Recent conversations</p>
+				</div>
+				<label class="flex items-center gap-2 text-xs text-base-content/60">
+					<span>Group</span>
+					<select class="select select-bordered select-xs" bind:value={groupMode} aria-label="Group chats">
+						<option value="date">Date</option>
+						<option value="category">Category</option>
+					</select>
+				</label>
+			</div>
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Search chats…"
+				bind:value={search}
+				aria-label="Search chats"
+			/>
+		</div>
 	{/snippet}
 
 	<div class="mt-3 space-y-4">

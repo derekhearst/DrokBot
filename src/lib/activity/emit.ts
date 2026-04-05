@@ -9,6 +9,7 @@ type ActivityEventType =
 	| 'dream_cycle'
 	| 'chat_started'
 	| 'review_action'
+	| 'skill_created'
 
 export async function emitActivity(
 	type: ActivityEventType,

@@ -36,6 +36,13 @@ export const appSettings = pgTable('app_settings', {
 		}>()
 		.notNull()
 		.default({ reservedResponsePct: 30, autoCompactThresholdPct: 72 }),
+	toolConfig: jsonb('tool_config')
+		.$type<{
+			approvalMode: 'auto' | 'confirm'
+		}>()
+		.notNull()
+		.default({ approvalMode: 'auto' }),
+	systemPrompt: text('system_prompt').notNull().default(''),
 	theme: text('theme').notNull().default('drokbot-night'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

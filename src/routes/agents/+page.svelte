@@ -64,26 +64,26 @@
 	<ContentPanel>
 		{#snippet header()}
 			<div>
-				<h1 class="text-3xl font-bold">Agents</h1>
-				<p class="text-sm text-base-content/70">Manage lifecycle and scheduling for autonomous workers.</p>
+				<h1 class="text-xl font-bold sm:text-3xl">Agents</h1>
+				<p class="text-xs text-base-content/70 sm:text-sm">Manage lifecycle and scheduling for autonomous workers.</p>
 			</div>
 		{/snippet}
 		{#snippet actions()}
-			<button class="btn btn-outline" type="button" onclick={runTick} disabled={busy}>Run Scheduler Tick</button>
-			<button class="btn btn-outline" type="button" onclick={runDrain} disabled={busy}>Drain Queue</button>
-			<a class="btn btn-primary" href="/agents/new">New Agent</a>
+			<button class="btn btn-sm btn-outline sm:btn-md" type="button" onclick={runTick} disabled={busy}>Tick</button>
+			<button class="btn btn-sm btn-outline sm:btn-md" type="button" onclick={runDrain} disabled={busy}>Drain</button>
+			<a class="btn btn-sm btn-primary sm:btn-md" href="/agents/new">New Agent</a>
 		{/snippet}
 	</ContentPanel>
 
 	{#if snapshot}
-		<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Open runs: {snapshot.openRuns}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Active agents: {snapshot.agents.active}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Idle agents: {snapshot.agents.idle}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Pending: {snapshot.queue.pending}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Running: {snapshot.queue.running}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Review: {snapshot.queue.review}</div>
-			<div class="rounded-xl border border-base-300 bg-base-100 p-3 text-sm">Failed: {snapshot.queue.failed}</div>
+		<div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-6">
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Open runs: {snapshot.openRuns}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Active: {snapshot.agents.active}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Idle: {snapshot.agents.idle}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Pending: {snapshot.queue.pending}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Running: {snapshot.queue.running}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Review: {snapshot.queue.review}</div>
+			<div class="rounded-lg border border-base-300 bg-base-100 p-2 text-xs sm:rounded-xl sm:p-3 sm:text-sm">Failed: {snapshot.queue.failed}</div>
 		</div>
 	{/if}
 

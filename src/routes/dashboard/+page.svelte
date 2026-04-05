@@ -42,12 +42,12 @@
 	);
 </script>
 
-<section class="space-y-4 pt-1">
+<section class="space-y-3 pt-1 sm:space-y-4">
 	<ContentPanel>
 		{#snippet header()}
 			<div>
-				<h1 class="text-3xl font-bold">DrokBot Dashboard</h1>
-				<p class="text-sm text-base-content/70">
+				<h1 class="text-xl font-bold sm:text-3xl">Dashboard</h1>
+				<p class="text-xs text-base-content/70 sm:text-sm">
 					Live system snapshot for chat, agents, memory, and workflow queues.
 				</p>
 			</div>
@@ -73,19 +73,19 @@
 		<p class="rounded-2xl border border-error/40 bg-error/10 p-3 text-sm text-error">{error}</p>
 	{/if}
 
-	<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+	<div class="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3">
 		{#if loading}
 			{#each Array.from({ length: 6 }) as _, idx (`loading-${idx}`)}
-				<div class="rounded-2xl border border-base-300 bg-base-100 p-4">
+				<div class="rounded-xl border border-base-300 bg-base-100 p-3 sm:rounded-2xl sm:p-4">
 					<div class="skeleton h-4 w-24"></div>
 					<div class="skeleton mt-3 h-8 w-16"></div>
 				</div>
 			{/each}
 		{:else}
 			{#each metricCards as card (card.label)}
-				<a class="rounded-2xl border border-base-300 bg-base-100 p-4 transition hover:border-primary/40 hover:shadow" href={card.href}>
-					<p class="text-sm text-base-content/70">{card.label}</p>
-					<p class="mt-1 text-3xl font-bold">{card.value}</p>
+				<a class="rounded-xl border border-base-300 bg-base-100 p-3 transition hover:border-primary/40 hover:shadow sm:rounded-2xl sm:p-4" href={card.href}>
+					<p class="text-xs text-base-content/70 sm:text-sm">{card.label}</p>
+					<p class="mt-1 text-2xl font-bold sm:text-3xl">{card.value}</p>
 				</a>
 			{/each}
 		{/if}
