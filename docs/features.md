@@ -4,7 +4,7 @@
 
 ## Overview
 
-DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile. Think Paperclip or OpenClaw, but yours — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
+DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
 
 **Single user, full control, zero cloud dependencies.**
 
@@ -12,189 +12,152 @@ DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you ca
 
 ## Core Features
 
-### 1. Chat Interface
+### 1. Chat
 
-- Real-time streaming responses via SSE
-- Per-message metrics: model used, tokens in/out, cost, TTFT, total time, tokens/sec
-- **Message editing** — edit any user message to fork the conversation from that point
-- **Regeneration** — re-run any assistant response with the same or different model
-- **Jump-back-in-time** — click any point in the conversation timeline to fork from there
-- **Context window indicator** — circular usage meter with dropdown breakdown panel (estimated live context allocation, reserved response room) plus per-model usage distribution graph and a "Compact Conversation" action
-- **Context window controls** — settings include sliders for reserved response band size and auto-compact threshold used during model downsizing
-- **Model picker** — reusable modal model browser with searchable grid (name, id, context, pricing, metadata); available inline in the main `/chat` composer and per-conversation chat input
-- **Composer controls** — main `/chat` input includes Add files, model picker, mic button, and a Gemini-style send button that switches to a stop button while streaming
-- **Composer route morph** — starting a new chat animates the composer from the home view into its in-thread position using a native view-transition size/position morph
-- **Streaming UX polish** — assistant "thinking" indicator renders in the message lane before first token arrives; streamed draft remains visible until persisted message hydration completes
-- **Tool call visibility** — collapsible cards for each tool invocation showing input, output, and execution time; special inline rendering for web search results
+- Real-time streaming responses
+- Per-message metrics (model, tokens, cost, latency)
+- Message editing and regeneration
+- Model picker per conversation
+- File attachments (images, PDFs, CSV, JSON, Excel)
+- Artifact side panel (collapsed, panel, fullscreen modes)
+- Auto-title generation
+- Memory context auto-injection before each response
+- Tool call visibility with collapsible cards
 
 ### 2. Autonomous Agents
 
-- Create named agents with custom roles, system prompts, and model assignments
-- Agents execute tasks autonomously with access to all tools (search, code, files, browser)
-- Agent lifecycle management: start, pause, resume, stop
-- Parent-child agent delegation for complex multi-step work
-- Per-run metrics tracking: token usage, cost, execution logs
+- Named agents with custom roles, system prompts, and model assignments
+- LLM-driven task execution with full tool access (search, code, files, browser)
+- Agent lifecycle management (active, paused, idle)
+- Parent-child delegation for multi-step work
+- Per-run metrics: token usage, cost, execution logs
+- Priority-based scheduler with concurrent queue
+- Agent run trace viewer (step-by-step logs per run)
 
 ### 3. Task Board & Code Review
 
-- Kanban-style task board (pending → running → review → completed/failed)
-- Tasks assigned to agents with priority ordering
-- **Git-based code review**: each task gets its own branch, in-app diff viewer, approve/reject/request-revision workflow
-- Task activity timeline showing agent actions and status changes
+- Kanban board with six columns: pending, running, review, changes_requested, completed, failed
+- Drag-drop reorder with priority slider (0–5)
+- Git-based code review: auto-branch per task, in-app diff, approve/reject/request-changes
+- Task-level chat threads for iterative feedback between user and agent
+- Review type classification (heavy, quick, informational)
+- Mobile-first review queue with swipe navigation
 
-### 4. Memory System (Sleep-Time Compute)
+### 4. Memory System
 
-Four interconnected pillars based on the sleep-time compute concept:
+- Vector embeddings via pgvector for semantic search
+- Hybrid retrieval: semantic similarity + keyword matching
+- Typed memory relations (supports, contradicts, depends_on, part_of) with strength scores
+- Automatic extraction from conversations and agent runs
+- Dream cycles: decay, prune, deduplicate, categorize, resolve contradictions
+- Memory explorer with search, category filters, importance sorting, relation graph
+- Pin memories to disable decay
 
-- **Storage** — PostgreSQL + pgvector. Every memory is a concise factual statement with: category, importance score, vector embedding, access count, timestamps, and typed relations to other memories (supports, contradicts, depends_on, part_of). One database, one source of truth.
-- **Extraction** — Automatic knowledge capture from conversations and agent runs. Detects user corrections, explicit decisions, repeated patterns, project/people/tech references. Lightweight extraction after each conversation; deeper extraction during dream cycles.
-- **Retrieval** — Multi-strategy context assembly: vector similarity search, importance weighting, recency bias, and knowledge graph traversal. Relevant memories are injected into system prompts so the model feels like it genuinely knows you.
-- **Consolidation (Dream Cycle)** — Periodic background process that deeply extracts knowledge from recent interactions, merges duplicates, resolves contradictions, creates cross-memory relations, applies a forgetting curve, and prunes decayed memories. Configurable frequency and aggressiveness. Manual trigger available.
+### 5. Artifacts
 
-### 5. Web Search (SearXNG)
+- 14 artifact types: markdown, code, config, image, SVG, Mermaid, HTML, Svelte, data table, chart, audio, video
+- Automatic versioning on each update
+- Gallery view (list, grid, fullscreen) with search and filters
+- Linked to conversations, messages, or tasks
+- Pin and delete controls
 
-- Privacy-respecting metasearch via self-hosted SearXNG instance
-- Available as an agent tool and as a standalone search panel in the UI
+### 6. Web Search
+
+- Privacy-respecting metasearch via self-hosted SearXNG
+- Available as an agent tool during task execution and chat
 - Structured results: title, URL, snippet
 
-### 6. Code Sandbox (AIO Sandbox)
+### 7. Code Sandbox
 
-- Shell command execution, file read/write, code execution in multiple languages
-- Browser automation and screenshots
-- Available as agent tools and as direct UI commands
-- Sandboxed environment — safe for autonomous agent use
+- Shell execution with timeout and buffer limits
+- File read, write, delete, list, and stat operations
+- Path-sandboxed to workspace directory (no directory traversal)
+- Browser automation via Playwright (screenshots, navigation)
+- Built into the Docker container (no external sandbox dependency)
 
-### 7. PWA & Push Notifications
+### 8. Smart Model Routing
 
-- Installable on mobile and desktop via Progressive Web App
-- Offline app shell caching
-- Web Push notifications (VAPID, no Firebase) for:
-  - Agent task completed / ready for review
-  - Agent needs human input
-  - Dream cycle summary
-  - Agent errors
+- Auto-routes queries to cheap, fast, or powerful models based on estimated complexity
+- Budget-aware downgrade near spending limits
+- Configurable via settings
 
-### 8. Dashboard
+### 9. Cost Tracking
 
-- Recent conversations, active agents, tasks needing review
-- Unread notifications, memory stats, cost overview
-- Single efficient query loads all dashboard data
+- Daily, weekly, and monthly spend views
+- Per-model and per-conversation cost breakdowns
+- Budget alerts with daily and monthly limits
+- Progress bars for spend vs budget
 
-### 9. Memory Explorer
+### 10. Dashboard
 
-- Search and browse all memories with category filters and importance sorting
-- Semantic search via vector similarity
-- Memory detail view with relation graph and access history
-- Manual edit, pin (disable decay), and delete
+- Metric cards: conversations, messages, agents, tasks, memories, artifacts, notifications
+- Click-through to each section
+- Cost dashboard on a dedicated sub-page
 
-### 10. Settings
+### 11. Activity Feed
+
+- Chronological event stream: task created, task status changed, agent action, memory created, dream cycle, chat started, review action
+- Type filter pills and refresh
+- Badge-coded entries with entity links
+
+### 12. Notifications & PWA
+
+- Installable on mobile and desktop as a Progressive Web App
+- Offline app shell caching with stale cache cleanup
+- Web Push notifications (VAPID, multi-device)
+- In-app notification feed with read/unread markers
+- Test notification sender in settings
+
+### 13. Settings
 
 - Default model selection
+- Theme (drokbot-night)
 - Notification preferences
-- Dream cycle configuration (frequency, aggressiveness)
-- Theme (dark-only)
-- Context controls: reserved response percentage and model-switch auto-compact threshold
+- Dream cycle configuration (decay lambda, prune threshold)
+- Budget configuration (daily and monthly limits)
+- Push subscription management
+- PWA install prompt
+
+### 14. Authentication
+
+- Single-user password-based login
+- HMAC-SHA256 signed session tokens in httpOnly cookies
+- Server hook guards all routes except `/login`
 
 ---
 
-## Architecture
-
-### Tech Stack
+## Tech Stack
 
 | Layer      | Technology                         |
 | ---------- | ---------------------------------- |
 | Framework  | SvelteKit (Svelte 5, runes)        |
 | Styling    | TailwindCSS v4 + DaisyUI           |
-| Database   | PostgreSQL 16 + pgvector           |
+| Database   | PostgreSQL + pgvector              |
 | ORM        | Drizzle ORM (postgres.js driver)   |
 | LLM        | OpenRouter SDK (multi-model)       |
 | Search     | SearXNG (self-hosted)              |
-| Sandbox    | AIO Sandbox (self-hosted)          |
+| Sandbox    | Built-in (Playwright, bash)        |
 | Deployment | Docker (adapter-node, bun runtime) |
-| Testing    | Playwright E2E                     |
+| Testing    | Playwright E2E (mock + live modes) |
 
-### Data Flow Pattern
+## Route Map
 
-- **Remote functions** (`query`/`command`/`form`) for ALL data operations — no `+page.server.ts` files
-- **Domain-first remote layout**: browser-consumed remotes live under `src/lib/{domain}` (for example `src/lib/chat/chat.remote.ts`), and server-only runtime modules are colocated in those same domain folders under `src/lib/**`
-- **SSE streaming** only for chat message streaming (`/chat/[id]/stream/+server.ts`)
-- `experimental.remoteFunctions: true` and `experimental.async: true` in svelte.config.js
-- `getRequestEvent()` inside remote functions for cookie/auth access
-
-### Infrastructure
-
-| Service     | Address                     |
-| ----------- | --------------------------- |
-| PostgreSQL  | 192.168.0.2:5432            |
-| SearXNG     | 192.168.0.2:8070            |
-| AIO Sandbox | 192.168.0.2:8060            |
-| DrokBot     | Docker container, port 3000 |
-
-### Auth
-
-- Simple cookie-based auth (single user, password from env var)
-- httpOnly secure cookies, constant-time password comparison
-- `hooks.server.ts` guard redirects unauthenticated requests to `/login`
-
-### Route Map
-
-| Route          | Purpose                   |
-| -------------- | ------------------------- |
-| `/`            | Dashboard                 |
-| `/login`       | Authentication            |
-| `/chat`        | Conversation list         |
-| `/chat/[id]`   | Individual conversation   |
-| `/agents`      | Agent management          |
-| `/agents/[id]` | Agent detail/config       |
-| `/tasks`       | Task board (kanban)       |
-| `/tasks/[id]`  | Task detail + code review |
-| `/memory`      | Memory explorer           |
-| `/memory/[id]` | Memory detail             |
-| `/settings`    | Configuration             |
-
----
-
-## Scope Boundaries
-
-**In scope (v1):**
-
-- Full chat with streaming, editing, forking, metrics
-- Autonomous agent creation and execution
-- Task management with git-based code review
-- 4-pillar memory system with dream cycles
-- Web search, code sandbox, browser automation
-- PWA with push notifications
-- Docker deployment for TrueNAS
-- Playwright E2E tests
-
-**Out of scope (future):**
-
-- Voice input/output
-- Integrated IDE (sandbox handles code execution)
-- Cost dashboard / billing
-
-* Smart model routing — auto-select cheap vs frontier models based on query complexity, budget-aware downgrade
-* Cost dashboard — daily/weekly/monthly spend by model, per-conversation cost, tool cost breakdown, budget alerts
-* Agent run trace viewer — full step-by-step visualization of autonomous task runs with tool calls, timing, and cost per step
-* Svelte artifact system — interactive components rendered inline in chat, with promotion workflow to permanent features
-* Interactive browse mode — split UI with live browser viewport for watching agent navigate, Stagehand + Playwright
-* MCP endpoint — expose tools and memory as MCP server so external clients can connect
-* Scheduled agent templates — pre-built configs for common loops (repo monitoring, competitor research, feed summaries)
-* A2A protocol support — agent-to-agent communication standard for structured handoffs between research and coding agents
-* Image generation — Flux/SDXL models via OpenRouter or Replicate API inline in chat
-* File uploads with vision — drag in PDFs, images, spreadsheets for model analysis
-* Self-improvement loop — research agent finds features, coding agent implements them, user approves via task board
-* Agent teams — persistent collaborative groups with shared objectives, role-based coordination, dependency-aware scheduling, shared context/artifacts, and team-level observability. Multiple teams run concurrently across different domains.
-* Design generation — agent produces multiple wireframe/UI variations as Svelte artifacts for user selection on the task board, chosen design feeds back into implementation
-* Repo management — self-improvement team also handles GitHub releases, README updates, documentation generation, issue triage, demo assets, and community promotion
-* Task-level chat threads — scoped conversation on each task card for iterative feedback between user and agent
-* Changes requested state — drag-back workflow with comment, agent iterates and resubmits
-* Review type classification — heavy (code/features), quick (emails/drafts), informational (reports/alerts) with different UI experiences per type
-* Review queue — mobile-first swipe interface for quick approvals, separate from full Kanban
-* Pipeline view — horizontal swimlane showing team workflow stages end to end
-* Project board — high-level view across teams with shipping timeline and cost/velocity metrics
-* Activity feed — chronological stream of all agent activity across teams for passive monitoring
-* Test runner service — sandbox runs Playwright against DrokBot, structured results on task runs
-* Test recording artifacts — video and screenshots from test runs stored on task records for visual verification
-* Test gate enforcement — failing tests block approval, passing tests required for auto-approve
-* Agent-written tests — coding agent writes Playwright tests as part of every implementation task
+| Route                       | Purpose                         |
+| --------------------------- | ------------------------------- |
+| `/`                         | Home / chat launcher            |
+| `/login`                    | Authentication                  |
+| `/chat`                     | Conversation list               |
+| `/chat/[id]`                | Conversation detail + streaming |
+| `/agents`                   | Agent management + scheduler    |
+| `/agents/[id]`              | Agent detail                    |
+| `/agents/[id]/runs/[runId]` | Agent run trace                 |
+| `/tasks`                    | Task board (kanban)             |
+| `/tasks/[id]`               | Task detail                     |
+| `/review`                   | Mobile review queue             |
+| `/memory`                   | Memory explorer                 |
+| `/memory/[id]`              | Memory detail + relation graph  |
+| `/artifacts`                | Artifact gallery                |
+| `/dashboard`                | System metrics                  |
+| `/dashboard/cost`           | Cost tracking + budgets         |
+| `/activity`                 | Activity event feed             |
+| `/settings`                 | Configuration + notifications   |
