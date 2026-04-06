@@ -20,7 +20,7 @@ function verifyApiKey(request: Request): boolean {
 
 // MCP Server Info
 const SERVER_INFO = {
-	name: 'drokbot',
+	name: 'AGENTSTUDIO',
 	version: '1.0.0',
 	protocolVersion: '2024-11-05',
 	capabilities: {
@@ -271,15 +271,15 @@ function schemaToJsonSchema(name: ToolName) {
 function listResources() {
 	return [
 		{
-			uri: 'drokbot://memories',
+			uri: 'AGENTSTUDIO://memories',
 			name: 'Memories',
 			description: 'Stored knowledge and facts',
 			mimeType: 'application/json',
 		},
-		{ uri: 'drokbot://agents', name: 'Agents', description: 'Configured AI agents', mimeType: 'application/json' },
-		{ uri: 'drokbot://tasks', name: 'Tasks', description: 'Agent task queue', mimeType: 'application/json' },
+		{ uri: 'AGENTSTUDIO://agents', name: 'Agents', description: 'Configured AI agents', mimeType: 'application/json' },
+		{ uri: 'AGENTSTUDIO://tasks', name: 'Tasks', description: 'Agent task queue', mimeType: 'application/json' },
 		{
-			uri: 'drokbot://conversations',
+			uri: 'AGENTSTUDIO://conversations',
 			name: 'Conversations',
 			description: 'Chat conversation history',
 			mimeType: 'application/json',
@@ -288,19 +288,19 @@ function listResources() {
 }
 
 async function readResource(uri: string) {
-	if (uri === 'drokbot://memories') {
+	if (uri === 'AGENTSTUDIO://memories') {
 		const rows = await db.select().from(memories).orderBy(desc(memories.createdAt)).limit(100)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'drokbot://agents') {
+	if (uri === 'AGENTSTUDIO://agents') {
 		const rows = await db.select().from(agents).orderBy(desc(agents.createdAt))
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'drokbot://tasks') {
+	if (uri === 'AGENTSTUDIO://tasks') {
 		const rows = await db.select().from(agentTasks).orderBy(desc(agentTasks.createdAt)).limit(100)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'drokbot://conversations') {
+	if (uri === 'AGENTSTUDIO://conversations') {
 		const rows = await db.select().from(conversations).orderBy(desc(conversations.createdAt)).limit(50)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
@@ -340,7 +340,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				return json(
 					rpcResponse(body.id, {
 						...SERVER_INFO,
-						instructions: 'DrokBot MCP server — exposes tools, memories, agents, tasks, and conversations.',
+						instructions: 'AGENTSTUDIO MCP server — exposes tools, memories, agents, tasks, and conversations.',
 					}),
 				)
 

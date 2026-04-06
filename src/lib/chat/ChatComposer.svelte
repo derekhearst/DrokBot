@@ -5,7 +5,7 @@
 		value = $bindable(''),
 		busy = false,
 		model = 'anthropic/claude-sonnet-4',
-		placeholder = 'Message DrokBot...',
+		placeholder = 'Message AGENTSTUDIO...',
 		recording = false,
 		transcribing = false,
 		speechSupported = false,

@@ -30,7 +30,7 @@ function ensurePushConfigured() {
 	}
 
 	webpush.setVapidDetails(
-		env.ORIGIN ? `${env.ORIGIN}` : 'mailto:drokbot@localhost',
+		env.ORIGIN ? `${env.ORIGIN}` : 'mailto:AGENTSTUDIO@localhost',
 		env.VAPID_PUBLIC_KEY,
 		env.VAPID_PRIVATE_KEY,
 	)

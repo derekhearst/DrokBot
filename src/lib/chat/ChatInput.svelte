@@ -247,7 +247,7 @@
 		{recording}
 		{transcribing}
 		{speechSupported}
-		placeholder="Message DrokBot..."
+		placeholder="Message AGENTSTUDIO..."
 		onSubmit={(content) => handleSubmit(content)}
 		onModelChange={(id) => onModelChange?.(id)}
 		onCancelGeneration={() => onCancelGeneration?.()}

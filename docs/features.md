@@ -1,10 +1,10 @@
-# DrokBot — Feature Contract
+# AGENTSTUDIO — Feature Contract
 
 > Self-hosted autonomous AI agent platform. Chat, code, search, learn — from any device.
 
 ## Overview
 
-DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
+AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
 
 **Single user, full control, zero cloud dependencies.**
 
@@ -113,7 +113,7 @@ DrokBot is a SvelteKit PWA that provides a personal, self-hosted AI agent you ca
 ### 13. Settings
 
 - Default model selection
-- Theme (drokbot-night)
+- Theme (AGENTSTUDIO-night)
 - Notification preferences
 - Dream cycle configuration (decay lambda, prune threshold)
 - Budget configuration (daily and monthly limits)

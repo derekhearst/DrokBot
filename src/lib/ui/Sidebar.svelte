@@ -17,7 +17,7 @@
 	<div class="flex items-center gap-2.5 border-b border-base-300 px-3 py-3">
 		<Avatar name="Derek" size="sm" />
 		<div class="min-w-0">
-			<p class="truncate text-sm font-semibold leading-tight">DrokBot</p>
+			<p class="truncate text-sm font-semibold leading-tight">AGENTSTUDIO</p>
 			<p class="truncate text-[10px] opacity-50">Autonomous Agent Console</p>
 		</div>
 	</div>

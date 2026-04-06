@@ -49,7 +49,7 @@ test('shows conversation detail timeline and composer for seeded data', async ({
 
 		await expect(page.getByRole('heading', { name: conversation.title })).toBeVisible()
 		await expect(page.getByText(/model:/i)).toBeVisible()
-		await expect(page.getByPlaceholder('Message DrokBot...')).toBeVisible()
+		await expect(page.getByPlaceholder('Message AGENTSTUDIO...')).toBeVisible()
 		await expect(page.locator('main').getByRole('button', { name: /send/i }).first()).toBeDisabled()
 	} finally {
 		await cleanupPrefixedRecords(prefix)

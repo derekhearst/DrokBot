@@ -1,4 +1,4 @@
-<svelte:head><title>Review | DrokBot</title></svelte:head>
+<svelte:head><title>Review | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { onMount } from 'svelte';

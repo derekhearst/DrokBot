@@ -1,4 +1,4 @@
-<svelte:head><title>{conversationData?.conversation.title ?? 'Chat'} | DrokBot</title></svelte:head>
+<svelte:head><title>{conversationData?.conversation.title ?? 'Chat'} | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { goto } from '$app/navigation';

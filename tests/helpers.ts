@@ -65,7 +65,7 @@ export async function authenticateContext(context: BrowserContext) {
 	const token = createSessionToken(AUTH_PASSWORD)
 	await context.addCookies([
 		{
-			name: 'drokbot_session',
+			name: 'AGENTSTUDIO_session',
 			value: token,
 			url: 'http://127.0.0.1:4173',
 			httpOnly: true,

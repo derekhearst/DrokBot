@@ -1,6 +1,6 @@
 <script lang="ts">
 	let {
-		placeholder = 'Ask DrokBot to do anything...',
+		placeholder = 'Ask AGENTSTUDIO to do anything...',
 		disabled = false,
 		onSubmit
 	} = $props<{

@@ -3,7 +3,7 @@ import { build, files, version } from '$service-worker'
 
 declare const self: ServiceWorkerGlobalScope
 
-const CACHE = `drokbot-${version}`
+const CACHE = `AGENTSTUDIO-${version}`
 const ASSETS = [...build, ...files]
 
 self.addEventListener('install', (event) => {
@@ -56,13 +56,13 @@ self.addEventListener('push', (event) => {
 			return event.data?.json() as { title?: string; body?: string; url?: string; tag?: string }
 		} catch {
 			return {
-				title: 'DrokBot',
+				title: 'AGENTSTUDIO',
 				body: event.data?.text() ?? 'New event',
 			}
 		}
 	})()
 
-	const title = payload.title ?? 'DrokBot notification'
+	const title = payload.title ?? 'AGENTSTUDIO notification'
 	const body = payload.body ?? 'You have a new update.'
 
 	event.waitUntil(
@@ -73,7 +73,7 @@ self.addEventListener('push', (event) => {
 			data: {
 				url: payload.url ?? '/tasks',
 			},
-			tag: payload.tag ?? 'drokbot-notification',
+			tag: payload.tag ?? 'AGENTSTUDIO-notification',
 		}),
 	)
 })

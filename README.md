@@ -1,4 +1,4 @@
-# DrokBot
+# AGENTSTUDIO
 
 Self-hosted autonomous AI agent platform with persistent memory, tool use, and mobile-ready chat.
 
@@ -6,7 +6,7 @@ Self-hosted autonomous AI agent platform with persistent memory, tool use, and m
 
 ### Chat and Tooling
 
-DrokBot provides a streaming chat interface where the assistant can call tools such as web search and sandboxed code execution. The filesystem toolset supports ranged file reads, full writes, unified-diff patch apply, deterministic string replace, recursive directory listing, search, move/rename, delete, and file metadata lookups. Chat supports editing and branching, per-message performance and cost metrics, and model selection.
+AGENTSTUDIO provides a streaming chat interface where the assistant can call tools such as web search and sandboxed code execution. The filesystem toolset supports ranged file reads, full writes, unified-diff patch apply, deterministic string replace, recursive directory listing, search, move/rename, delete, and file metadata lookups. Chat supports editing and branching, per-message performance and cost metrics, and model selection.
 
 ### Agents and Tasks
 

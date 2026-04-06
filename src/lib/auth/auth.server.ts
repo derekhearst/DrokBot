@@ -2,7 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { env } from '$env/dynamic/private'
 import type { Cookies } from '@sveltejs/kit'
 
-const SESSION_COOKIE = 'drokbot_session'
+const SESSION_COOKIE = 'AGENTSTUDIO_session'
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
 function requireSecret() {

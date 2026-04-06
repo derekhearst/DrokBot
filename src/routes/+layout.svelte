@@ -66,8 +66,8 @@
 	onMount(() => {
 		if (!browser) return;
 
-		document.documentElement.setAttribute('data-theme', 'drokbot-night');
-		localStorage.setItem('drokbot-theme', 'drokbot-night');
+		document.documentElement.setAttribute('data-theme', 'AGENTSTUDIO-night');
+		localStorage.setItem('AGENTSTUDIO-theme', 'AGENTSTUDIO-night');
 
 		const root = document.documentElement;
 		let rafId = 0;

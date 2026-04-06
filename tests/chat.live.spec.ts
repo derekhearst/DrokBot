@@ -19,7 +19,7 @@ test.describe('@live chat', () => {
 			await page.getByRole('button', { name: /create/i }).click()
 			await expect(page).toHaveURL(/\/chat\/[0-9a-f-]+$/)
 
-			await page.getByPlaceholder('Message DrokBot...').fill(prompt)
+			await page.getByPlaceholder('Message AGENTSTUDIO...').fill(prompt)
 			await page
 				.locator('main')
 				.getByRole('button', { name: /^send$/i })

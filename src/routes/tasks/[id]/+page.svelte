@@ -1,4 +1,4 @@
-<svelte:head><title>{detail?.task.title ?? 'Task'} | DrokBot</title></svelte:head>
+<svelte:head><title>{detail?.task.title ?? 'Task'} | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

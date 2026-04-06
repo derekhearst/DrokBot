@@ -23,7 +23,7 @@ test('dashboard shows live seeded activity and workspace navigation', async ({ p
 		await seedNotification(prefix, { title: `${prefix} Dashboard Notification` })
 
 		await page.goto('/')
-		await expect(page.getByRole('heading', { name: /drokbot dashboard/i })).toBeVisible()
+		await expect(page.getByRole('heading', { name: /AGENTSTUDIO dashboard/i })).toBeVisible()
 		await expect(page.getByText(conversation.title)).toBeVisible()
 		await expect(page.getByRole('link', { name: task.title })).toBeVisible()
 		await expect(page.getByText(/review:/i)).toBeVisible()

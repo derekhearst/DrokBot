@@ -1,12 +1,12 @@
 services:
-  drokbot:
-    image: ghcr.io/derekhearst/drokbot:latest
-    container_name: drokbot
+  AGENTSTUDIO:
+    image: ghcr.io/derekhearst/AGENTSTUDIO:latest
+    container_name: AGENTSTUDIO
     restart: unless-stopped
     ports:
       - "1234:3000"
     volumes:
-      - /mnt/Apps/Apps/drokbot/workspace:/workspace
+      - /mnt/Apps/Apps/AGENTSTUDIO/workspace:/workspace
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
@@ -27,7 +27,7 @@ services:
 
   watchtower:
     image: containrrr/watchtower
-    container_name: watchtower-drokbot
+    container_name: watchtower-AGENTSTUDIO
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

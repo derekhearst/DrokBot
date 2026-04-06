@@ -1,4 +1,4 @@
-<svelte:head><title>Demo | DrokBot</title></svelte:head>
+<svelte:head><title>Demo | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { resolve } from '$app/paths';

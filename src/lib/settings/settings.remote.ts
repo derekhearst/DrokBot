@@ -9,7 +9,7 @@ import { capabilityGroups, estimateTokens, estimateToolDefinitionTokens } from '
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),
 	transcriptionModel: z.string().trim().min(1).max(120).optional(),
-	theme: z.enum(['drokbot-night']).optional(),
+	theme: z.enum(['AGENTSTUDIO-night']).optional(),
 	notificationPrefs: z
 		.object({
 			taskCompleted: z.boolean().optional(),

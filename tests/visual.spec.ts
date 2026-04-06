@@ -21,7 +21,7 @@ test('visual regression: dashboard shell', async ({ page }) => {
 		await seedMemory(prefix, { content: `${prefix} memory` })
 
 		await page.goto('/')
-		await expect(page.getByRole('heading', { name: /drokbot dashboard/i })).toBeVisible()
+		await expect(page.getByRole('heading', { name: /AGENTSTUDIO dashboard/i })).toBeVisible()
 		await expect(page.locator('main header').first()).toHaveScreenshot('dashboard-header.png', {
 			animations: 'disabled',
 			maxDiffPixelRatio: 0.05,

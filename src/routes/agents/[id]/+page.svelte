@@ -1,4 +1,4 @@
-<svelte:head><title>{data?.agent.name ?? 'Agent'} | DrokBot</title></svelte:head>
+<svelte:head><title>{data?.agent.name ?? 'Agent'} | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

@@ -208,7 +208,7 @@ CREATE TABLE "app_settings" (
 	"context_config" jsonb DEFAULT '{"reservedResponsePct":30,"autoCompactThresholdPct":72}'::jsonb NOT NULL,
 	"tool_config" jsonb DEFAULT '{"approvalMode":"auto"}'::jsonb NOT NULL,
 	"system_prompt" text DEFAULT '' NOT NULL,
-	"theme" text DEFAULT 'drokbot-night' NOT NULL,
+	"theme" text DEFAULT 'AGENTSTUDIO-night' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

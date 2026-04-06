@@ -2,7 +2,7 @@
 @plugin 'daisyui';
 
 @plugin 'daisyui/theme' {
-	name: 'drokbot-night';
+	name: 'AGENTSTUDIO-night';
 	default: true;
 	prefersdark: true;
 	color-scheme: dark;

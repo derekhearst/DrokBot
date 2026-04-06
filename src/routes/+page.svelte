@@ -1,4 +1,4 @@
-<svelte:head><title>Chat | DrokBot</title></svelte:head>
+<svelte:head><title>Chat | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { goto } from '$app/navigation';

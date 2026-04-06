@@ -14,7 +14,7 @@ test('streams a mock assistant response from chat UI', async ({ page }) => {
 		await newChatBtn.click()
 		await expect(page).toHaveURL(/\/chat\/[0-9a-f-]+$/, { timeout: 10000 })
 
-		await page.getByPlaceholder('Message DrokBot...').fill(`${prefix} hello stream`)
+		await page.getByPlaceholder('Message AGENTSTUDIO...').fill(`${prefix} hello stream`)
 		await page
 			.locator('main')
 			.getByRole('button', { name: /^send$/i })

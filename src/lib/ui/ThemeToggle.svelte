@@ -3,40 +3,40 @@
 
 	let { className = '' } = $props<{ className?: string }>();
 
-	const THEMES = ['drokbot', 'drokbot-night'] as const;
+	const THEMES = ['AGENTSTUDIO', 'AGENTSTUDIO-night'] as const;
 	type ThemeName = (typeof THEMES)[number];
 
-	let theme = $state<ThemeName>('drokbot');
+	let theme = $state<ThemeName>('AGENTSTUDIO');
 
 	function applyTheme(next: ThemeName) {
 		theme = next;
 		if (!browser) return;
 		document.documentElement.setAttribute('data-theme', next);
-		localStorage.setItem('drokbot-theme', next);
+		localStorage.setItem('AGENTSTUDIO-theme', next);
 	}
 
 	if (browser) {
-		const saved = localStorage.getItem('drokbot-theme');
-		if (saved === 'drokbot' || saved === 'drokbot-night') {
+		const saved = localStorage.getItem('AGENTSTUDIO-theme');
+		if (saved === 'AGENTSTUDIO' || saved === 'AGENTSTUDIO-night') {
 			theme = saved;
 			document.documentElement.setAttribute('data-theme', saved);
 		} else {
 			const fromSystem: ThemeName = window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'drokbot-night'
-				: 'drokbot';
+				? 'AGENTSTUDIO-night'
+				: 'AGENTSTUDIO';
 			theme = fromSystem;
 			document.documentElement.setAttribute('data-theme', fromSystem);
-			localStorage.setItem('drokbot-theme', fromSystem);
+			localStorage.setItem('AGENTSTUDIO-theme', fromSystem);
 		}
 	}
 
 	function toggleTheme() {
-		applyTheme(theme === 'drokbot' ? 'drokbot-night' : 'drokbot');
+		applyTheme(theme === 'AGENTSTUDIO' ? 'AGENTSTUDIO-night' : 'AGENTSTUDIO');
 	}
 </script>
 
 <button class={`btn btn-sm btn-ghost ${className}`} type="button" onclick={toggleTheme} aria-label="Toggle theme">
-	{#if theme === 'drokbot-night'}
+	{#if theme === 'AGENTSTUDIO-night'}
 		<span aria-hidden="true">Light</span>
 	{:else}
 		<span aria-hidden="true">Night</span>

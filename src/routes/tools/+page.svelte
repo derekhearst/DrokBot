@@ -1,4 +1,4 @@
-<svelte:head><title>Tools | DrokBot</title></svelte:head>
+<svelte:head><title>Tools | AGENTSTUDIO</title></svelte:head>
 
 <script lang="ts">
 	import { onMount } from 'svelte';

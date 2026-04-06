@@ -1,6 +1,6 @@
 {
-	"name": "DrokBot",
-	"short_name": "DrokBot",
+	"name": "AGENTSTUDIO",
+	"short_name": "AGENTSTUDIO",
 	"description": "Self-hosted autonomous AI agent platform",
 	"start_url": "/",
 	"scope": "/",
