@@ -12,22 +12,22 @@
 	}
 </script>
 
-<aside class="flex h-full w-56 flex-col bg-base-100/85 backdrop-blur-sm xl:rounded-2xl xl:border xl:border-base-300/50 xl:shadow-lg xl:shadow-black/20">
+<aside class="flex h-full w-48 flex-col rounded-2xl border border-base-300/50 bg-base-100/85 shadow-lg shadow-black/20 backdrop-blur-sm xl:w-56">
 	<!-- Brand / user header -->
-	<div class="flex items-center gap-2.5 border-b border-base-300/50 px-3 py-3 xl:rounded-t-2xl">
+	<div class="brand-row flex items-center gap-2.5 border-b border-base-300/50 px-3 py-3 rounded-t-2xl">
 		<img src={favicon} alt="Agent Studio" class="size-8 shrink-0" />
-		<div class="min-w-0">
+		<div class="brand-copy min-w-0">
 			<p class="truncate text-sm leading-tight"><span class="font-light tracking-wide">Agent</span><span class="font-bold">Studio</span></p>
-			<p class="truncate text-[10px] opacity-50">Autonomous Agent Console</p>
+			<p class="hidden truncate text-[10px] opacity-50 xl:block">Autonomous Agent Console</p>
 		</div>
 	</div>
 
-	<nav class="flex flex-1 flex-col overflow-y-auto px-2 py-3 text-sm">
+	<nav class="nav-group flex flex-1 flex-col overflow-y-auto px-2 py-3 text-sm">
 
 		<!-- Chat — pinned top, prominent -->
 		<a
 			href="/"
-			class="mb-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 font-semibold transition-colors"
+			class="nav-link mb-3 flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 font-semibold transition-colors"
 			class:bg-primary={isActive('/')}
 			class:text-primary-content={isActive('/')}
 			class:hover:bg-primary={isActive('/')}
@@ -44,10 +44,10 @@
 		</a>
 
 		<!-- Work group -->
-		<p class="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-widest opacity-40">Work</p>
+		<p class="nav-section-title mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-widest opacity-40">Work</p>
 		<div class="mb-4 space-y-0.5">
 			<a href="/dashboard"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/dashboard')} class:font-medium={isActive('/dashboard')} class:text-primary={isActive('/dashboard')}
 				onclick={onNavigate}>
 				<!-- squares-2x2 -->
@@ -57,8 +57,19 @@
 				</svg>
 				Dashboard
 			</a>
+			<a href="/projects"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class:bg-base-200={isActive('/projects')} class:font-medium={isActive('/projects')} class:text-primary={isActive('/projects')}
+				onclick={onNavigate}>
+				<svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M12 2l9 5-9 5-9-5 9-5z"/>
+					<path d="M3 17l9 5 9-5"/>
+					<path d="M3 12l9 5 9-5"/>
+				</svg>
+				Projects
+			</a>
 			<a href="/agents"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/agents')} class:font-medium={isActive('/agents')} class:text-primary={isActive('/agents')}
 				onclick={onNavigate}>
 				<!-- cpu chip -->
@@ -69,7 +80,7 @@
 				Agents
 			</a>
 			<a href="/tasks"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/tasks')} class:font-medium={isActive('/tasks')} class:text-primary={isActive('/tasks')}
 				onclick={onNavigate}>
 				<!-- check-circle -->
@@ -79,7 +90,7 @@
 				Tasks
 			</a>
 			<a href="/review"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/review')} class:font-medium={isActive('/review')} class:text-primary={isActive('/review')}
 				onclick={onNavigate}>
 				<!-- eye -->
@@ -90,7 +101,7 @@
 				Review
 			</a>
 			<a href="/artifacts"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/artifacts')} class:font-medium={isActive('/artifacts')} class:text-primary={isActive('/artifacts')}
 				onclick={onNavigate}>
 				<!-- layers / documents -->
@@ -102,7 +113,7 @@
 				Artifacts
 			</a>
 			<a href="/skills"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/skills')} class:font-medium={isActive('/skills')} class:text-primary={isActive('/skills')}
 				onclick={onNavigate}>
 				<!-- academic-cap / skill -->
@@ -113,7 +124,7 @@
 				Skills
 			</a>
 			<a href="/tools"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/tools')} class:font-medium={isActive('/tools')} class:text-primary={isActive('/tools')}
 				onclick={onNavigate}>
 				<!-- wrench -->
@@ -125,10 +136,10 @@
 		</div>
 
 		<!-- Insights group -->
-		<p class="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-widest opacity-40">Insights</p>
+		<p class="nav-section-title mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-widest opacity-40">Insights</p>
 		<div class="mb-4 space-y-0.5">
 			<a href="/memory"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/memory')} class:font-medium={isActive('/memory')} class:text-primary={isActive('/memory')}
 				onclick={onNavigate}>
 				<!-- circle-stack / brain -->
@@ -140,7 +151,7 @@
 				Memory
 			</a>
 			<a href="/activity"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/activity')} class:font-medium={isActive('/activity')} class:text-primary={isActive('/activity')}
 				onclick={onNavigate}>
 				<!-- bolt / activity -->
@@ -150,7 +161,7 @@
 				Activity
 			</a>
 			<a href="/cost"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/cost')} class:font-medium={isActive('/cost')} class:text-primary={isActive('/cost')}
 				onclick={onNavigate}>
 				<!-- currency dollar -->
@@ -164,7 +175,7 @@
 		<!-- Settings — pinned bottom -->
 		<div class="mt-auto">
 			<a href="/users"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/users')} class:font-medium={isActive('/users')} class:text-primary={isActive('/users')}
 				onclick={onNavigate}>
 				<svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -176,7 +187,7 @@
 				Users
 			</a>
 			<a href="/settings"
-				class="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
+				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/settings')} class:font-medium={isActive('/settings')} class:text-primary={isActive('/settings')}
 				onclick={onNavigate}>
 				<!-- cog-6-tooth -->

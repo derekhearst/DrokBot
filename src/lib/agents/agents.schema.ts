@@ -1,5 +1,6 @@
 import { integer, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { messageRoleEnum } from '../chat/chat.schema'
+import { projects } from '../projects/projects.schema'
 
 export const agentStatusEnum = pgEnum('agent_status', ['active', 'paused', 'idle'])
 export const taskStatusEnum = pgEnum('task_status', [
@@ -14,6 +15,7 @@ export const reviewTypeEnum = pgEnum('review_type', ['heavy', 'quick', 'informat
 
 export const agents = pgTable('agents', {
 	id: uuid('id').primaryKey().defaultRandom(),
+	projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
 	name: text('name').notNull(),
 	role: text('role').notNull(),
 	systemPrompt: text('system_prompt').notNull(),
@@ -26,6 +28,7 @@ export const agents = pgTable('agents', {
 
 export const agentTasks = pgTable('agent_tasks', {
 	id: uuid('id').primaryKey().defaultRandom(),
+	projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
 	agentId: uuid('agent_id')
 		.notNull()
 		.references(() => agents.id, { onDelete: 'cascade' }),
@@ -42,6 +45,7 @@ export const agentTasks = pgTable('agent_tasks', {
 
 export const agentRuns = pgTable('agent_runs', {
 	id: uuid('id').primaryKey().defaultRandom(),
+	projectId: uuid('project_id').references(() => projects.id, { onDelete: 'set null' }),
 	agentId: uuid('agent_id')
 		.notNull()
 		.references(() => agents.id, { onDelete: 'cascade' }),

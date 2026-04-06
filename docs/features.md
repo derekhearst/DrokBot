@@ -24,6 +24,9 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 - Auto-title generation
 - Memory context auto-injection before each response
 - Tool call visibility with collapsible cards
+- ask_user prompt surface docked above the composer (inline dropdown, not modal)
+- Multi-question ask_user flow with previous/next navigation and per-question focus
+- Freeform bypass: typing in the composer resolves pending ask_user prompts directly
 - Auto-scroll keeps following live output during both text streaming and tool call rendering
 
 ### 2. Autonomous Agents
@@ -44,6 +47,14 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 - Task-level chat threads for iterative feedback between user and agent
 - Review type classification (heavy, quick, informational)
 - Mobile-first review queue with swipe navigation
+
+### 3.5 Projects (Foundation)
+
+- New `/projects` unified entrypoint for project-scoped operations
+- Project lifecycle support: active, archived, deleted
+- Goal hierarchy model for scoped mission/context propagation
+- Strategy governance workflow states: draft, submitted, approved, rejected, active, superseded
+- Project-scoped schema hooks added for agents, tasks, and runs
 
 ### 4. Memory System
 
@@ -100,6 +111,7 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 ### 11. Activity Feed
 
 - Chronological event stream: task created, task status changed, agent action, memory created, dream cycle, chat started, review action
+- Includes project and governance events: project created/status changed, goal created, strategy submitted/approved/rejected
 - Type filter pills and refresh
 - Badge-coded entries with entity links
 
@@ -154,23 +166,24 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 
 ## Route Map
 
-| Route                       | Purpose                         |
-| --------------------------- | ------------------------------- |
-| `/`                         | Home / chat launcher            |
-| `/login`                    | Authentication                  |
-| `/users`                    | Admin user management           |
-| `/chat`                     | Conversation list               |
-| `/chat/[id]`                | Conversation detail + streaming |
-| `/agents`                   | Agent management + scheduler    |
-| `/agents/[id]`              | Agent detail                    |
-| `/agents/[id]/runs/[runId]` | Agent run trace                 |
-| `/tasks`                    | Task board (kanban)             |
-| `/tasks/[id]`               | Task detail                     |
-| `/review`                   | Mobile review queue             |
-| `/memory`                   | Memory explorer                 |
-| `/memory/[id]`              | Memory detail + relation graph  |
-| `/artifacts`                | Artifact gallery                |
-| `/dashboard`                | System metrics                  |
-| `/dashboard/cost`           | Cost tracking + budgets         |
-| `/activity`                 | Activity event feed             |
-| `/settings`                 | Configuration + notifications   |
+| Route                       | Purpose                            |
+| --------------------------- | ---------------------------------- |
+| `/`                         | Home / chat launcher               |
+| `/login`                    | Authentication                     |
+| `/users`                    | Admin user management              |
+| `/chat`                     | Conversation list                  |
+| `/chat/[id]`                | Conversation detail + streaming    |
+| `/projects`                 | Project control plane (foundation) |
+| `/agents`                   | Agent management + scheduler       |
+| `/agents/[id]`              | Agent detail                       |
+| `/agents/[id]/runs/[runId]` | Agent run trace                    |
+| `/tasks`                    | Task board (kanban)                |
+| `/tasks/[id]`               | Task detail                        |
+| `/review`                   | Mobile review queue                |
+| `/memory`                   | Memory explorer                    |
+| `/memory/[id]`              | Memory detail + relation graph     |
+| `/artifacts`                | Artifact gallery                   |
+| `/dashboard`                | System metrics                     |
+| `/dashboard/cost`           | Cost tracking + budgets            |
+| `/activity`                 | Activity event feed                |
+| `/settings`                 | Configuration + notifications      |

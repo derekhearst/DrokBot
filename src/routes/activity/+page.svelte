@@ -22,6 +22,12 @@
 		{ value: 'chat_started', label: 'Chat' },
 		{ value: 'review_action', label: 'Review' },
 		{ value: 'skill_created', label: 'Skill' },
+		{ value: 'project_created', label: 'Project Created' },
+		{ value: 'project_status_changed', label: 'Project Status' },
+		{ value: 'goal_created', label: 'Goal Created' },
+		{ value: 'strategy_submitted', label: 'Strategy Submitted' },
+		{ value: 'strategy_approved', label: 'Strategy Approved' },
+		{ value: 'strategy_rejected', label: 'Strategy Rejected' },
 	];
 
 	onMount(() => {
@@ -66,6 +72,12 @@
 		dream_cycle: 'badge-accent',
 		chat_started: 'badge-success',
 		review_action: 'badge-error',
+		project_created: 'badge-info',
+		project_status_changed: 'badge-warning',
+		goal_created: 'badge-secondary',
+		strategy_submitted: 'badge-primary',
+		strategy_approved: 'badge-success',
+		strategy_rejected: 'badge-error',
 	};
 </script>
 

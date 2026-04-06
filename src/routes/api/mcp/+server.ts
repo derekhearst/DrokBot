@@ -67,6 +67,7 @@ const toolDescriptions: Record<ToolName, string> = {
 	update_skill_file: 'Update a nested file within a skill.',
 	delete_skill: 'Delete a skill and all its nested files.',
 	delete_skill_file: 'Delete a specific nested file from a skill.',
+	ask_user: 'Request clarification or confirmation from the user before proceeding.',
 }
 
 function schemaToJsonSchema(name: ToolName) {
@@ -392,5 +393,3 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		return json(rpcError(body.id, -32603, error instanceof Error ? error.message : 'Internal server error'))
 	}
 }
-
-

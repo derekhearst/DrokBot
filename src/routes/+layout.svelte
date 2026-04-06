@@ -6,6 +6,7 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import Sidebar from '$lib/ui/Sidebar.svelte';
+	import MobileNav from '$lib/ui/MobileNav.svelte';
 	import RecentChats from '$lib/chat/RecentChats.svelte';
 	import DreamCycles from '$lib/memory/DreamCycles.svelte';
 	import SidePanel from '$lib/ui/SidePanel.svelte';
@@ -15,11 +16,11 @@
 	import { skillsPanel } from '$lib/state.svelte';
 
 	let { children } = $props();
-	let mobileSidebarOpen = $state(false);
 	let chatPanelOpen = $state(false);
 
 	const isLoginRoute = $derived(page.url.pathname.startsWith('/login'));
 	const isChatRoute = $derived(page.url.pathname.startsWith('/chat'));
+	const isChatDetailRoute = $derived(/^\/chat\/[^/]+$/.test(page.url.pathname));
 	const isMemoryRoute = $derived(page.url.pathname.startsWith('/memory'));
 	const isSettingsRoute = $derived(page.url.pathname.startsWith('/settings'));
 	const isSkillsRoute = $derived(page.url.pathname.startsWith('/skills'));
@@ -56,10 +57,6 @@
 					});
 			});
 		});
-	}
-
-	function closeSidebar() {
-		mobileSidebarOpen = false;
 	}
 
 	onMount(() => {
@@ -135,11 +132,17 @@
 {#if isLoginRoute}
 	{@render children()}
 {:else}
-	<div class="drawer xl:drawer-open">
-		<input id="app-drawer" type="checkbox" class="drawer-toggle" bind:checked={mobileSidebarOpen} />
+	<div class="relative flex h-screen flex-col overflow-hidden sm:flex-row">
+		<div class="hidden shrink-0 p-3 pr-0 sm:block">
+			<Sidebar activePath={page.url.pathname} />
+		</div>
 
-		<div class="drawer-content relative flex h-screen flex-col overflow-hidden">
-			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 lg:gap-4 lg:p-3 xl:p-3 {showAside ? 'lg:grid-cols-[minmax(0,1fr)_320px]' : ''}">
+		<div class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+			{#if isChatDetailRoute}
+				<MobileNav activePath={page.url.pathname} slideOff={true} />
+			{/if}
+
+			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 lg:gap-3 lg:p-3 xl:p-3 {showAside ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
 				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 lg:rounded-3xl lg:border lg:border-base-300 lg:bg-base-100/85 lg:px-4 lg:pt-3 lg:pb-4 lg:shadow-sm xl:px-6 xl:pt-3 xl:pb-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
 					{@render children()}
 				</main>
@@ -163,11 +166,9 @@
 				{/if}
 			</div>
 
-		</div>
-
-		<div class="drawer-side z-30">
-			<label for="app-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-			<Sidebar activePath={page.url.pathname} onNavigate={closeSidebar} />
+			{#if !isChatDetailRoute}
+				<MobileNav activePath={page.url.pathname} />
+			{/if}
 		</div>
 	</div>
 

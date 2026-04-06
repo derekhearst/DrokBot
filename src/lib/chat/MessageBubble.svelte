@@ -87,7 +87,7 @@
 	{/if}
 
 	{#if isUser}
-		<div class="max-w-[90%] rounded-2xl border-2 border-primary bg-base-100/60 px-4 py-3">
+		<div class="max-w-[90%] rounded-2xl border border-primary/25 bg-base-100/72 px-4 py-3">
 			{#if editing}
 				<textarea class="textarea textarea-bordered w-full" bind:value={draft}></textarea>
 				<div class="mt-2 flex gap-2">
@@ -99,7 +99,7 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="assistant-message pl-4">
+		<div class="assistant-message rounded-2xl border border-base-300/55 bg-base-100/36 px-4 py-3">
 			{#if editing}
 				<textarea class="textarea textarea-bordered w-full" bind:value={draft}></textarea>
 				<div class="mt-2 flex gap-2">

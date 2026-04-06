@@ -809,6 +809,27 @@ export const toolSchemas = {
 		key: z.string().min(1).max(200),
 		value: z.unknown(),
 	}),
+	ask_user: z.object({
+		questions: z
+			.array(
+				z.object({
+					header: z.string().min(1),
+					question: z.string().min(1),
+					options: z
+						.array(
+							z.object({
+								label: z.string().min(1),
+								description: z.string().optional(),
+								recommended: z.boolean().optional(),
+							}),
+						)
+						.default([]),
+					allowFreeformInput: z.boolean().default(true),
+				}),
+			)
+			.min(1)
+			.max(8),
+	}),
 	list_skills: z.object({}),
 	read_skill: z.object({ name: z.string().min(1) }),
 	read_skill_file: z.object({ skillName: z.string().min(1), fileName: z.string().min(1) }),
@@ -868,6 +889,8 @@ const toolDescriptions: Record<ToolName, string> = {
 	artifact_update: 'Update the content of an existing artifact. Creates a new version automatically.',
 	artifact_storage_update:
 		"Update a key in an artifact's persistent storage. Used for reactive/living artifacts like trackers and dashboards.",
+	ask_user:
+		'Ask the user one or more clarifying questions with prefilled options. Use when you need explicit user input before proceeding.',
 	list_skills:
 		'List all available skills with their names, descriptions, and nested file names. Use this to discover what skills are available.',
 	read_skill:
@@ -921,175 +944,500 @@ export async function executeTool(call: ToolCall, userId: string) {
 	return toolUserContext.run({ userId }, async () => {
 		const startedAt = Date.now()
 		try {
-		if (call.name === 'web_search') {
-			const input = toolSchemas.web_search.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await webSearch(input.query),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'web_search') {
+				const input = toolSchemas.web_search.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await webSearch(input.query),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'shell') {
-			const input = toolSchemas.shell.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await execShell(input.command),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'shell') {
+				const input = toolSchemas.shell.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await execShell(input.command),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'file_read') {
-			const input = toolSchemas.file_read.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await readFile(input.path, input.startLine, input.endLine),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'file_read') {
+				const input = toolSchemas.file_read.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await readFile(input.path, input.startLine, input.endLine),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'file_write') {
-			const input = toolSchemas.file_write.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await writeFile(input.path, input.content),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'file_write') {
+				const input = toolSchemas.file_write.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await writeFile(input.path, input.content),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'file_patch') {
-			const input = toolSchemas.file_patch.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await patchFile(input.patch),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'file_patch') {
+				const input = toolSchemas.file_patch.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await patchFile(input.patch),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'file_replace') {
-			const input = toolSchemas.file_replace.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await replaceInFile(input.path, input.oldStr, input.newStr, {
-					requireUnique: input.requireUnique,
-					replaceAll: input.replaceAll,
-				}),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'file_replace') {
+				const input = toolSchemas.file_replace.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await replaceInFile(input.path, input.oldStr, input.newStr, {
+						requireUnique: input.requireUnique,
+						replaceAll: input.replaceAll,
+					}),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'list_directory') {
-			const input = toolSchemas.list_directory.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await listDirectory(input.path, input.depth, input.includeHidden),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'list_directory') {
+				const input = toolSchemas.list_directory.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await listDirectory(input.path, input.depth, input.includeHidden),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'delete_file') {
-			const input = toolSchemas.delete_file.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await deleteFile(input.path, input.recursive),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'delete_file') {
+				const input = toolSchemas.delete_file.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await deleteFile(input.path, input.recursive),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'move_file') {
-			const input = toolSchemas.move_file.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await moveFile(input.fromPath, input.toPath, input.overwrite),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'move_file') {
+				const input = toolSchemas.move_file.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await moveFile(input.fromPath, input.toPath, input.overwrite),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'search_files') {
-			const input = toolSchemas.search_files.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await searchFiles(input.query, {
-					path: input.path,
-					maxResults: input.maxResults,
-					isRegex: input.isRegex,
-					includeIgnored: input.includeIgnored,
-					caseSensitive: input.caseSensitive,
-				}),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'search_files') {
+				const input = toolSchemas.search_files.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await searchFiles(input.query, {
+						path: input.path,
+						maxResults: input.maxResults,
+						isRegex: input.isRegex,
+						includeIgnored: input.includeIgnored,
+						caseSensitive: input.caseSensitive,
+					}),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'file_info') {
-			const input = toolSchemas.file_info.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await fileInfo(input.path),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'file_info') {
+				const input = toolSchemas.file_info.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await fileInfo(input.path),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'browser_screenshot') {
-			const input = toolSchemas.browser_screenshot.parse(call.arguments)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: await browserScreenshot(input.url),
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'browser_screenshot') {
+				const input = toolSchemas.browser_screenshot.parse(call.arguments)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: await browserScreenshot(input.url),
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'memory_search') {
-			const input = toolSchemas.memory_search.parse(call.arguments)
-			const matches = await searchMemories(input.query, input.limit)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: matches,
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'memory_search') {
+				const input = toolSchemas.memory_search.parse(call.arguments)
+				const matches = await searchMemories(input.query, input.limit)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: matches,
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'create_task') {
-			const input = toolSchemas.create_task.parse(call.arguments)
-			const { createTaskForAvailableAgent } = await import('$lib/agents/agents.server')
-			const task = await createTaskForAvailableAgent(input.title, input.description)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: task,
-				executionMs: Date.now() - startedAt,
+			if (call.name === 'create_task') {
+				const input = toolSchemas.create_task.parse(call.arguments)
+				const { createTaskForAvailableAgent } = await import('$lib/agents/agents.server')
+				const task = await createTaskForAvailableAgent(input.title, input.description)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: task,
+					executionMs: Date.now() - startedAt,
+				}
 			}
-		}
 
-		if (call.name === 'image_generate') {
-			const input = toolSchemas.image_generate.parse(call.arguments)
-			const result = await generateImage(input.prompt, input.model, input.size)
+			if (call.name === 'image_generate') {
+				const input = toolSchemas.image_generate.parse(call.arguments)
+				const result = await generateImage(input.prompt, input.model, input.size)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'artifact_create') {
+				const input = toolSchemas.artifact_create.parse(call.arguments)
+				const [artifact] = await db
+					.insert(artifacts)
+					.values({
+						type: input.type,
+						title: input.title,
+						content: input.content,
+						language: input.language ?? null,
+						category: input.category ?? null,
+						conversationId: (call as ToolCallWithContext).conversationId ?? null,
+						messageId: (call as ToolCallWithContext).messageId ?? null,
+					})
+					.returning()
+
+				await db.insert(artifactVersions).values({
+					artifactId: artifact.id,
+					version: 1,
+					content: input.content,
+					language: input.language ?? null,
+					metadata: {},
+				})
+
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { artifactId: artifact.id, title: artifact.title, type: artifact.type },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'artifact_update') {
+				const input = toolSchemas.artifact_update.parse(call.arguments)
+
+				const [existing] = await db.select().from(artifacts).where(eq(artifacts.id, input.artifactId)).limit(1)
+				if (!existing) {
+					return { success: false, tool: call.name, error: 'Artifact not found', executionMs: Date.now() - startedAt }
+				}
+
+				const updates: Record<string, unknown> = { content: input.content, updatedAt: new Date() }
+				if (input.title) updates.title = input.title
+
+				await db.update(artifacts).set(updates).where(eq(artifacts.id, input.artifactId))
+
+				// Auto-version
+				const [maxRow] = await db
+					.select({ maxVersion: max(artifactVersions.version) })
+					.from(artifactVersions)
+					.where(eq(artifactVersions.artifactId, input.artifactId))
+
+				const nextVersion = (maxRow?.maxVersion ?? 0) + 1
+				await db.insert(artifactVersions).values({
+					artifactId: input.artifactId,
+					version: nextVersion,
+					content: input.content,
+					language: existing.language,
+					metadata: {},
+				})
+
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { artifactId: input.artifactId, version: nextVersion },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'artifact_storage_update') {
+				const input = toolSchemas.artifact_storage_update.parse(call.arguments)
+
+				const [existing] = await db
+					.select({ storage: artifacts.storage })
+					.from(artifacts)
+					.where(eq(artifacts.id, input.artifactId))
+					.limit(1)
+
+				if (!existing) {
+					return { success: false, tool: call.name, error: 'Artifact not found', executionMs: Date.now() - startedAt }
+				}
+
+				const newStorage = { ...existing.storage, [input.key]: input.value }
+				await db
+					.update(artifacts)
+					.set({ storage: newStorage, updatedAt: new Date() })
+					.where(eq(artifacts.id, input.artifactId))
+
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { artifactId: input.artifactId, updatedKey: input.key },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'ask_user') {
+				const input = toolSchemas.ask_user.parse(call.arguments)
+				return {
+					success: false,
+					tool: call.name,
+					input,
+					error: 'ask_user must be handled by chat streaming flow and cannot run directly.',
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'list_skills') {
+				const summaries = await listSkillSummaries()
+				return {
+					success: true,
+					tool: call.name,
+					input: {},
+					result: summaries,
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'read_skill') {
+				const input = toolSchemas.read_skill.parse(call.arguments)
+				const skill = await getSkillByName(input.name)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.name}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				await bumpSkillAccess(skill.id)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: {
+						name: skill.name,
+						description: skill.description,
+						content: skill.content,
+						tags: skill.tags,
+						files: skill.files.map((f) => ({ name: f.name, description: f.description })),
+					},
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'read_skill_file') {
+				const input = toolSchemas.read_skill_file.parse(call.arguments)
+				const skill = await getSkillByName(input.skillName)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.skillName}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const file = await getSkillFileByName(skill.id, input.fileName)
+				if (!file) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				await bumpSkillAccess(skill.id)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { name: file.name, description: file.description, content: file.content },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'create_skill') {
+				const input = toolSchemas.create_skill.parse(call.arguments)
+				const skill = await createSkill(input.name, input.description, input.content, input.tags)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { id: skill.id, name: skill.name },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'update_skill') {
+				const input = toolSchemas.update_skill.parse(call.arguments)
+				const skill = await getSkillByName(input.name)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.name}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const { name: _name, ...fields } = input
+				const updated = await updateSkillRecord(skill.id, fields)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { id: updated.id, name: updated.name },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'add_skill_file') {
+				const input = toolSchemas.add_skill_file.parse(call.arguments)
+				const skill = await getSkillByName(input.skillName)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.skillName}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const file = await addSkillFile(skill.id, input.fileName, input.description, input.content)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { fileId: file.id, name: file.name },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'update_skill_file') {
+				const input = toolSchemas.update_skill_file.parse(call.arguments)
+				const skill = await getSkillByName(input.skillName)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.skillName}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const file = await getSkillFileByName(skill.id, input.fileName)
+				if (!file) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const { skillName: _s, fileName: _f, ...fields } = input
+				const updated = await updateSkillFileRecord(file.id, fields)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { fileId: updated.id, name: updated.name },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'delete_skill') {
+				const input = toolSchemas.delete_skill.parse(call.arguments)
+				const skill = await getSkillByName(input.name)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.name}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				await deleteSkillRecord(skill.id)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { deleted: input.name },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			if (call.name === 'delete_skill_file') {
+				const input = toolSchemas.delete_skill_file.parse(call.arguments)
+				const skill = await getSkillByName(input.skillName)
+				if (!skill) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `Skill "${input.skillName}" not found`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				const file = await getSkillFileByName(skill.id, input.fileName)
+				if (!file) {
+					return {
+						success: false,
+						tool: call.name,
+						error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
+						executionMs: Date.now() - startedAt,
+					}
+				}
+				await deleteSkillFileRecord(file.id)
+				return {
+					success: true,
+					tool: call.name,
+					input,
+					result: { deleted: input.fileName, fromSkill: input.skillName },
+					executionMs: Date.now() - startedAt,
+				}
+			}
+
+			const input = toolSchemas.run_subagent.parse(call.arguments)
+			const { runSubagent } = await import('$lib/agents/agents.server')
+			const result = await runSubagent(input.task, input.context)
 			return {
 				success: true,
 				tool: call.name,
@@ -1097,320 +1445,6 @@ export async function executeTool(call: ToolCall, userId: string) {
 				result,
 				executionMs: Date.now() - startedAt,
 			}
-		}
-
-		if (call.name === 'artifact_create') {
-			const input = toolSchemas.artifact_create.parse(call.arguments)
-			const [artifact] = await db
-				.insert(artifacts)
-				.values({
-					type: input.type,
-					title: input.title,
-					content: input.content,
-					language: input.language ?? null,
-					category: input.category ?? null,
-					conversationId: (call as ToolCallWithContext).conversationId ?? null,
-					messageId: (call as ToolCallWithContext).messageId ?? null,
-				})
-				.returning()
-
-			await db.insert(artifactVersions).values({
-				artifactId: artifact.id,
-				version: 1,
-				content: input.content,
-				language: input.language ?? null,
-				metadata: {},
-			})
-
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { artifactId: artifact.id, title: artifact.title, type: artifact.type },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'artifact_update') {
-			const input = toolSchemas.artifact_update.parse(call.arguments)
-
-			const [existing] = await db.select().from(artifacts).where(eq(artifacts.id, input.artifactId)).limit(1)
-			if (!existing) {
-				return { success: false, tool: call.name, error: 'Artifact not found', executionMs: Date.now() - startedAt }
-			}
-
-			const updates: Record<string, unknown> = { content: input.content, updatedAt: new Date() }
-			if (input.title) updates.title = input.title
-
-			await db.update(artifacts).set(updates).where(eq(artifacts.id, input.artifactId))
-
-			// Auto-version
-			const [maxRow] = await db
-				.select({ maxVersion: max(artifactVersions.version) })
-				.from(artifactVersions)
-				.where(eq(artifactVersions.artifactId, input.artifactId))
-
-			const nextVersion = (maxRow?.maxVersion ?? 0) + 1
-			await db.insert(artifactVersions).values({
-				artifactId: input.artifactId,
-				version: nextVersion,
-				content: input.content,
-				language: existing.language,
-				metadata: {},
-			})
-
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { artifactId: input.artifactId, version: nextVersion },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'artifact_storage_update') {
-			const input = toolSchemas.artifact_storage_update.parse(call.arguments)
-
-			const [existing] = await db
-				.select({ storage: artifacts.storage })
-				.from(artifacts)
-				.where(eq(artifacts.id, input.artifactId))
-				.limit(1)
-
-			if (!existing) {
-				return { success: false, tool: call.name, error: 'Artifact not found', executionMs: Date.now() - startedAt }
-			}
-
-			const newStorage = { ...existing.storage, [input.key]: input.value }
-			await db
-				.update(artifacts)
-				.set({ storage: newStorage, updatedAt: new Date() })
-				.where(eq(artifacts.id, input.artifactId))
-
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { artifactId: input.artifactId, updatedKey: input.key },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'list_skills') {
-			const summaries = await listSkillSummaries()
-			return {
-				success: true,
-				tool: call.name,
-				input: {},
-				result: summaries,
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'read_skill') {
-			const input = toolSchemas.read_skill.parse(call.arguments)
-			const skill = await getSkillByName(input.name)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.name}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			await bumpSkillAccess(skill.id)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: {
-					name: skill.name,
-					description: skill.description,
-					content: skill.content,
-					tags: skill.tags,
-					files: skill.files.map((f) => ({ name: f.name, description: f.description })),
-				},
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'read_skill_file') {
-			const input = toolSchemas.read_skill_file.parse(call.arguments)
-			const skill = await getSkillByName(input.skillName)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.skillName}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const file = await getSkillFileByName(skill.id, input.fileName)
-			if (!file) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			await bumpSkillAccess(skill.id)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { name: file.name, description: file.description, content: file.content },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'create_skill') {
-			const input = toolSchemas.create_skill.parse(call.arguments)
-			const skill = await createSkill(input.name, input.description, input.content, input.tags)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { id: skill.id, name: skill.name },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'update_skill') {
-			const input = toolSchemas.update_skill.parse(call.arguments)
-			const skill = await getSkillByName(input.name)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.name}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const { name: _name, ...fields } = input
-			const updated = await updateSkillRecord(skill.id, fields)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { id: updated.id, name: updated.name },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'add_skill_file') {
-			const input = toolSchemas.add_skill_file.parse(call.arguments)
-			const skill = await getSkillByName(input.skillName)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.skillName}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const file = await addSkillFile(skill.id, input.fileName, input.description, input.content)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { fileId: file.id, name: file.name },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'update_skill_file') {
-			const input = toolSchemas.update_skill_file.parse(call.arguments)
-			const skill = await getSkillByName(input.skillName)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.skillName}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const file = await getSkillFileByName(skill.id, input.fileName)
-			if (!file) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const { skillName: _s, fileName: _f, ...fields } = input
-			const updated = await updateSkillFileRecord(file.id, fields)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { fileId: updated.id, name: updated.name },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'delete_skill') {
-			const input = toolSchemas.delete_skill.parse(call.arguments)
-			const skill = await getSkillByName(input.name)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.name}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			await deleteSkillRecord(skill.id)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { deleted: input.name },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		if (call.name === 'delete_skill_file') {
-			const input = toolSchemas.delete_skill_file.parse(call.arguments)
-			const skill = await getSkillByName(input.skillName)
-			if (!skill) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `Skill "${input.skillName}" not found`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			const file = await getSkillFileByName(skill.id, input.fileName)
-			if (!file) {
-				return {
-					success: false,
-					tool: call.name,
-					error: `File "${input.fileName}" not found in skill "${input.skillName}"`,
-					executionMs: Date.now() - startedAt,
-				}
-			}
-			await deleteSkillFileRecord(file.id)
-			return {
-				success: true,
-				tool: call.name,
-				input,
-				result: { deleted: input.fileName, fromSkill: input.skillName },
-				executionMs: Date.now() - startedAt,
-			}
-		}
-
-		const input = toolSchemas.run_subagent.parse(call.arguments)
-		const { runSubagent } = await import('$lib/agents/agents.server')
-		const result = await runSubagent(input.task, input.context)
-		return {
-			success: true,
-			tool: call.name,
-			input,
-			result,
-			executionMs: Date.now() - startedAt,
-		}
 		} catch (error) {
 			return {
 				success: false,
@@ -1429,7 +1463,16 @@ type PendingApproval = {
 	timer: ReturnType<typeof setTimeout>
 }
 
+export type AskUserQuestion = z.infer<typeof toolSchemas.ask_user>['questions'][number]
+export type AskUserAnswers = Record<string, string>
+
+type PendingQuestion = {
+	resolve: (answers: AskUserAnswers | null) => void
+	timer: ReturnType<typeof setTimeout>
+}
+
 const pendingApprovals = new Map<string, PendingApproval>()
+const pendingQuestions = new Map<string, PendingQuestion>()
 
 export function requestApproval(token: string): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -1450,5 +1493,27 @@ export function resolveApproval(token: string, approved: boolean): boolean {
 	clearTimeout(entry.timer)
 	pendingApprovals.delete(token)
 	entry.resolve(approved)
+	return true
+}
+
+export function requestUserQuestions(token: string): Promise<AskUserAnswers | null> {
+	return new Promise((resolve) => {
+		const timer = setTimeout(() => {
+			if (pendingQuestions.has(token)) {
+				pendingQuestions.delete(token)
+				resolve(null)
+			}
+		}, APPROVAL_TIMEOUT_MS)
+
+		pendingQuestions.set(token, { resolve, timer })
+	})
+}
+
+export function resolveUserQuestions(token: string, answers: AskUserAnswers): boolean {
+	const entry = pendingQuestions.get(token)
+	if (!entry) return false
+	clearTimeout(entry.timer)
+	pendingQuestions.delete(token)
+	entry.resolve(answers)
 	return true
 }

@@ -123,23 +123,14 @@ body::after {
 	}
 }
 
-/* Below lg: chat and home pages go truly edge-to-edge */
-@media (max-width: 1023px) {
+/* Below xl: chat and home pages go truly edge-to-edge */
+@media (max-width: 1279px) {
 	.mobile-chat-main {
 		padding: 0.5rem 0 0 !important;
 		border: none !important;
 		border-radius: 0 !important;
 		background: transparent !important;
 		box-shadow: none !important;
-	}
-}
-
-/* Desktop: floating sidebar */
-@media (min-width: 1280px) {
-	.drawer.xl\:drawer-open > .drawer-side {
-		background: transparent;
-		padding: 0.75rem;
-		padding-right: 0;
 	}
 }
 

@@ -15,6 +15,7 @@ import * as activitySchema from '$lib/activity/activity.schema'
 import * as artifactsSchema from '$lib/artifacts/artifacts.schema'
 import * as llmUsageSchema from '$lib/cost/usage.schema'
 import * as skillsSchema from '$lib/skills/skills.schema'
+import * as projectsSchema from '$lib/projects/projects.schema'
 import { readMigrationFiles } from 'drizzle-orm/migrator'
 
 const databaseUrl = env.DATABASE_URL
@@ -31,6 +32,7 @@ const schema = {
 	...artifactsSchema,
 	...llmUsageSchema,
 	...skillsSchema,
+	...projectsSchema,
 }
 
 const MIGRATIONS_SCHEMA = 'drizzle'
@@ -262,8 +264,8 @@ async function bootstrapDatabase() {
 	const latestLocalMigrationMillis = getLatestLocalMigrationMillis()
 	const lastAppliedMigrationMillis = await getLastAppliedMigrationMillis()
 	const hasPendingMigrations =
-		latestLocalMigrationMillis !== null
-		&& (lastAppliedMigrationMillis === null || lastAppliedMigrationMillis < latestLocalMigrationMillis)
+		latestLocalMigrationMillis !== null &&
+		(lastAppliedMigrationMillis === null || lastAppliedMigrationMillis < latestLocalMigrationMillis)
 
 	if (createdDatabase || resetLegacySchema || hasPendingMigrations) {
 		console.log('[db] Applying migrations')

@@ -9,6 +9,12 @@ export const activityEventTypeEnum = pgEnum('activity_event_type', [
 	'chat_started',
 	'review_action',
 	'skill_created',
+	'project_created',
+	'project_status_changed',
+	'goal_created',
+	'strategy_submitted',
+	'strategy_approved',
+	'strategy_rejected',
 ])
 
 export const activityEvents = pgTable('activity_events', {

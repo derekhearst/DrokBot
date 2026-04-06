@@ -12,6 +12,10 @@ AGENTSTUDIO provides a streaming chat interface where the assistant can call too
 
 You can create specialized agents, assign tasks, and review results in a branch-based code review flow. Task lifecycle is managed in a Kanban-style board with clear status transitions.
 
+### Projects Control Plane (Foundation)
+
+Projects are now the unified top-level workspace for orchestration. The initial foundation includes project lifecycle management, goal hierarchy scaffolding, and strategy governance APIs (submit, approve, reject) with project-scoped data hooks for agents, tasks, and runs.
+
 ### Memory and Dream Cycles
 
 The memory system stores, retrieves, and consolidates facts over time using PostgreSQL + pgvector. Periodic dream cycles merge duplicates, resolve contradictions, and prune stale knowledge.
@@ -120,6 +124,7 @@ Notes:
 - `/chat/[id]` Chat detail
 - `/dashboard` System dashboard
 - `/cost` Cost dashboard
+- `/projects` Projects control plane (foundation)
 - `/agents` Agent management
 - `/tasks` Task board
 - `/memory` Memory explorer

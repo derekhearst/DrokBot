@@ -15,6 +15,12 @@ const listActivitySchema = z.object({
 			'chat_started',
 			'review_action',
 			'skill_created',
+			'project_created',
+			'project_status_changed',
+			'goal_created',
+			'strategy_submitted',
+			'strategy_approved',
+			'strategy_rejected',
 		])
 		.optional(),
 	limit: z.number().int().min(1).max(200).optional(),

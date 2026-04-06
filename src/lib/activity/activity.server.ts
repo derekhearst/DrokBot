@@ -10,6 +10,12 @@ type ActivityEventType =
 	| 'chat_started'
 	| 'review_action'
 	| 'skill_created'
+	| 'project_created'
+	| 'project_status_changed'
+	| 'goal_created'
+	| 'strategy_submitted'
+	| 'strategy_approved'
+	| 'strategy_rejected'
 
 export async function emitActivity(
 	type: ActivityEventType,

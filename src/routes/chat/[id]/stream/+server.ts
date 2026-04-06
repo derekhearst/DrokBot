@@ -12,6 +12,7 @@ import { executeTool, getToolDefinitions, type ToolName, type ToolCallWithContex
 import { logLlmUsage } from '$lib/cost/usage'
 import { getOrCreateSettings } from '$lib/settings/settings.server'
 import { requestApproval } from '$lib/tools/tools.server'
+import { requestUserQuestions, toolSchemas } from '$lib/tools/tools.server'
 import { listSkillSummaries } from '$lib/skills/skills.server'
 import { trimHistoricalToolResults, trimToolResult } from '$lib/chat/chat'
 
@@ -164,6 +165,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (currentSettings.systemPrompt?.trim()) {
 		systemSections.push(currentSettings.systemPrompt)
 	}
+	systemSections.push(
+		[
+			'Tool usage policy:',
+			'- If the user asks you to ask questions, gather preferences with options, or confirm choices before continuing, you MUST call the ask_user tool.',
+			"- Do not only say you'll ask a question in plain text when ask_user is appropriate.",
+			'- Use concise questions with clear option labels, and allow freeform input when the request is open-ended.',
+		].join('\n'),
+	)
 	if (skillSummariesText) {
 		systemSections.push(`Available skills (use read_skill to load full content when relevant):\n${skillSummariesText}`)
 	}
@@ -330,6 +339,74 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								executionMs: 0,
 							})
 							toolResults.push({ call_id: tc.id, name: tc.name, result: deniedMessage })
+							continue
+						}
+
+						if (tc.name === 'ask_user') {
+							let input: {
+								questions: Array<{
+									header: string
+									question: string
+									options: Array<{ label: string; description?: string; recommended?: boolean }>
+									allowFreeformInput: boolean
+								}>
+							}
+							try {
+								input = toolSchemas.ask_user.parse(parsedArgs)
+							} catch {
+								const errorMessage = 'ask_user received invalid arguments.'
+								controller.enqueue(
+									sse('tool_result', {
+										name: tc.name,
+										success: false,
+										executionMs: 0,
+										result: errorMessage,
+									}),
+								)
+								allToolCalls.push({
+									name: tc.name,
+									arguments: parsedArgs,
+									result: { error: errorMessage },
+									executionMs: 0,
+								})
+								toolResults.push({ call_id: tc.id, name: tc.name, result: errorMessage })
+								continue
+							}
+
+							const questionToken = crypto.randomUUID()
+							controller.enqueue(
+								sse('ask_user', {
+									token: questionToken,
+									id: tc.id,
+									name: tc.name,
+									questions: input.questions,
+								}),
+							)
+
+							const answers = await requestUserQuestions(questionToken)
+							const questionResult = {
+								questions: input.questions,
+								answers,
+								timedOut: answers === null,
+							}
+							const resultStr = trimToolResult(tc.name, JSON.stringify(questionResult))
+
+							controller.enqueue(
+								sse('tool_result', {
+									name: tc.name,
+									success: answers !== null,
+									executionMs: 0,
+									result: resultStr,
+								}),
+							)
+
+							toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
+							allToolCalls.push({
+								name: tc.name,
+								arguments: parsedArgs,
+								result: questionResult,
+								executionMs: 0,
+							})
 							continue
 						}
 

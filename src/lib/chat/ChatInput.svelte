@@ -174,11 +174,11 @@
 		stopRecording();
 		const msg = content;
 		const selectedAttachments = [...attachments];
-		await onSubmit?.(msg, selectedAttachments);
 		value = '';
 		baseText = '';
 		attachments = [];
 		uploadError = null;
+		await onSubmit?.(msg, selectedAttachments);
 	}
 
 	function formatBytes(size: number) {

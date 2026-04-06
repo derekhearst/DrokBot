@@ -16,6 +16,7 @@
 	import ContextWindow from '$lib/chat/ContextWindow.svelte';
 	import MessageBubble from '$lib/chat/MessageBubble.svelte';
 	import LiveToolCallCard from '$lib/chat/LiveToolCallCard.svelte';
+	import AskUserModal from '$lib/chat/AskUserModal.svelte';
 	import { renderMarkdown } from '$lib/chat/chat';
 	import ArtifactPanel from '$lib/artifacts/ArtifactPanel.svelte';
 
@@ -25,6 +26,19 @@
 		mimeType: string;
 		size: number;
 		url: string;
+	};
+
+	type AskUserOption = {
+		label: string;
+		description?: string;
+		recommended?: boolean;
+	};
+
+	type AskUserQuestion = {
+		header: string;
+		question: string;
+		options: AskUserOption[];
+		allowFreeformInput?: boolean;
 	};
 
 	type StreamingToolCall = {
@@ -61,6 +75,8 @@
 	let streamedAssistantTarget = $state('');
 	let draftInterpolationFrame = $state<number | null>(null);
 	let draftInterpolationLastTs = $state<number | null>(null);
+	let pendingAskUser = $state<{ token: string; questions: AskUserQuestion[] } | null>(null);
+	let askUserModalOpen = $state(false);
 
 	// Artifact panel state
 	type PanelMode = 'collapsed' | 'panel' | 'fullscreen';
@@ -387,6 +403,54 @@
 		);
 	}
 
+	function buildAskUserAnswersFromFreeform(freeform: string): Record<string, string> {
+		if (!pendingAskUser) return {};
+		const trimmed = freeform.trim();
+		if (!trimmed) return {};
+
+		return Object.fromEntries(
+			pendingAskUser.questions
+				.filter((question) => question.header.trim().length > 0)
+				.map((question) => [question.header, trimmed])
+		);
+	}
+
+	async function resolveAskUser(answers: Record<string, string>) {
+		if (!pendingAskUser) return;
+		const { token } = pendingAskUser;
+		const response = await fetch(`/chat/${conversationId}/ask-user`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ token, answers }),
+		});
+
+		if (!response.ok) {
+			throw new Error('Failed to submit ask_user answers');
+		}
+
+		pendingAskUser = null;
+		askUserModalOpen = false;
+	}
+
+	function closeAskUserModal() {
+		askUserModalOpen = false;
+	}
+
+	function skipAskUserToChat() {
+		askUserModalOpen = false;
+	}
+
+	async function handleComposerSubmit(content: string, attachments: ChatAttachment[]) {
+		if (pendingAskUser) {
+			const freeformAnswers = buildAskUserAnswersFromFreeform(content);
+			if (Object.keys(freeformAnswers).length === 0) return;
+			await resolveAskUser(freeformAnswers);
+			return;
+		}
+
+		await streamMessage(content, false, attachments);
+	}
+
 	async function streamMessage(content: string, regenerate = false, attachments: ChatAttachment[] = []) {
 		if (!conversationId || streaming) return;
 
@@ -466,6 +530,15 @@
 						];
 					}
 
+					if (eventName === 'ask_user') {
+						waitingForFirstToken = false;
+						pendingAskUser = {
+							token: payload.token,
+							questions: payload.questions ?? []
+						};
+						askUserModalOpen = true;
+					}
+
 					if (eventName === 'tool_call') {
 						waitingForFirstToken = false;
 						const existing = streamingToolCalls.find((tc) => tc.id === payload.id);
@@ -493,6 +566,11 @@
 					}
 
 					if (eventName === 'tool_result') {
+						if (payload.name === 'ask_user') {
+							pendingAskUser = null;
+							askUserModalOpen = false;
+						}
+
 						streamingToolCalls = streamingToolCalls.map((tc) =>
 							tc.name === payload.name && (tc.status === 'executing' || tc.status === 'approved')
 								? {
@@ -626,7 +704,7 @@
 				<span class="loading loading-spinner loading-sm opacity-50"></span>
 			</div>
 		{:else}
-			<div class="flex items-center gap-2 px-1 py-0 lg:px-0">
+			<div class="chat-detail-header flex items-center gap-2 px-2 py-1.5 lg:px-3 lg:py-2">
 				<button onclick={() => goto('/')} class="btn btn-ghost btn-sm btn-circle lg:hidden" aria-label="Back to chats">
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
 				</button>
@@ -703,12 +781,20 @@
 		{/if}
 
 		<div class="chat-composer-transition">
+			<AskUserModal
+				open={askUserModalOpen && !!pendingAskUser}
+				questions={pendingAskUser?.questions ?? []}
+				onSubmit={resolveAskUser}
+				onClose={closeAskUserModal}
+				onSkipToChat={skipAskUserToChat}
+			/>
+
 			<ChatInput
-				busy={streaming}
+				busy={streaming && !pendingAskUser}
 				onCancelGeneration={stopStreaming}
 				model={model}
 				onModelChange={(next) => maybeCompactBeforeModelSwitch(next)}
-				onSubmit={(content, attachments) => streamMessage(content, false, attachments)}
+				onSubmit={(content, attachments) => handleComposerSubmit(content, attachments)}
 				estimatedRemaining={Math.max(0, contextMetrics.total - contextMetrics.used)}
 			/>
 		</div>
@@ -725,6 +811,15 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	.chat-detail-header {
+		border: 1px solid color-mix(in oklab, var(--color-base-300) 72%, transparent);
+		border-radius: 0.9rem;
+		background: color-mix(in oklab, var(--color-base-100) 84%, transparent);
+		box-shadow: 0 1px 0 color-mix(in oklab, var(--color-base-300) 35%, transparent);
+	}
+</style>
 
 
 

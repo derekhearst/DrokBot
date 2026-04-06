@@ -1,8 +1,9 @@
 <script lang="ts">
 	let {
 		activePath = '/',
-		onNavigate
-	} = $props<{ activePath?: string; onNavigate?: (() => void) | undefined }>();
+		onNavigate,
+		slideOff = false
+	} = $props<{ activePath?: string; onNavigate?: (() => void) | undefined; slideOff?: boolean }>();
 
 	function isActive(href: string) {
 		if (href === '/') return activePath === '/' || activePath.startsWith('/chat');
@@ -10,6 +11,7 @@
 	}
 
 	const moreItems = [
+		{ href: '/projects', label: 'Projects' },
 		{ href: '/memory', label: 'Memory' },
 		{ href: '/activity', label: 'Activity' },
 		{ href: '/review', label: 'Review' },
@@ -34,6 +36,11 @@
 			paths: ['M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z']
 		},
 		{
+			href: '/projects',
+			label: 'Projects',
+			paths: ['M12 2l9 5-9 5-9-5 9-5', 'M3 17l9 5 9-5', 'M3 12l9 5 9-5']
+		},
+		{
 			href: '/tasks',
 			label: 'Tasks',
 			// check-circle
@@ -48,7 +55,7 @@
 	] as const;
 </script>
 
-<nav class="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-lg justify-center px-3 xl:hidden safe-bottom">
+<nav class="z-20 mx-auto flex w-full max-w-400 justify-center px-3 py-2 sm:hidden safe-bottom {slideOff ? 'mobile-nav-slide-off' : ''}">
 	<div class="flex w-full items-center justify-around rounded-2xl border border-base-300/50 bg-base-100/80 px-1 py-1 shadow-lg shadow-black/20 backdrop-blur-xl">
 		{#each navItems as item}
 			<a
@@ -71,6 +78,10 @@
 					{:else if item.href === '/dashboard'}
 						<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
 						<rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+					{:else if item.href === '/projects'}
+						<path d="M12 2l9 5-9 5-9-5 9-5"/>
+						<path d="M3 17l9 5 9-5"/>
+						<path d="M3 12l9 5 9-5"/>
 					{:else if item.href === '/tasks'}
 						<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>
 					{:else if item.href === '/agents'}
@@ -100,6 +111,7 @@
 <div id="mobile-more-menu" popover class="mobile-more-popover">
 	<div class="grid grid-cols-3 gap-1 p-3">
 		{#each [
+			{ href: '/projects', label: 'Projects', icon: 'layers3' },
 			{ href: '/memory', label: 'Memory', icon: 'db' },
 			{ href: '/activity', label: 'Activity', icon: 'activity' },
 			{ href: '/review', label: 'Review', icon: 'eye' },
@@ -108,7 +120,7 @@
 			{ href: '/tools', label: 'Tools', icon: 'wrench' },
 			{ href: '/cost', label: 'Cost', icon: 'dollar' },
 			{ href: '/settings', label: 'Settings', icon: 'cog' }
-		] as item}
+		] as item (item.href)}
 			<a
 				href={item.href}
 				class="flex flex-col items-center gap-1 rounded-xl p-3 text-xs transition-colors hover:bg-base-200 {isActive(item.href) ? 'font-semibold text-primary' : 'text-base-content/70'}"
@@ -122,6 +134,10 @@
 						<ellipse cx="12" cy="5" rx="9" ry="3"/>
 						<path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
 						<path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/>
+					{:else if item.icon === 'layers3'}
+						<path d="M12 2l9 5-9 5-9-5 9-5"/>
+						<path d="M3 17l9 5 9-5"/>
+						<path d="M3 12l9 5 9-5"/>
 					{:else if item.icon === 'activity'}
 						<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
 					{:else if item.icon === 'eye'}
@@ -152,6 +168,25 @@
 <style>
 	.safe-bottom {
 		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+	}
+
+	.mobile-nav-slide-off {
+		position: absolute;
+		inset-inline: 0;
+		top: 0;
+		animation: nav-slide-off-up 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+		pointer-events: none;
+	}
+
+	@keyframes nav-slide-off-up {
+		from {
+			opacity: 1;
+			transform: translateY(0);
+		}
+		to {
+			opacity: 0;
+			transform: translateY(-140%);
+		}
 	}
 
 	.mobile-more-popover {

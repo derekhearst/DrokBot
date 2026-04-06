@@ -9,7 +9,7 @@ export const capabilityGroups = {
 	core: {
 		label: 'Core',
 		description: 'Web search and memory lookup',
-		tools: ['web_search', 'memory_search'] as ToolName[],
+		tools: ['web_search', 'memory_search', 'ask_user'] as ToolName[],
 		alwaysOn: true,
 	},
 	sandbox: {
@@ -130,6 +130,11 @@ const groupLabels: Record<BuiltinToolGroup, string> = {
 const toolDefinitions: Array<{ name: string; description: string; group: BuiltinToolGroup }> = [
 	{ name: 'web_search', description: 'Search the web for information.', group: 'core' },
 	{ name: 'memory_search', description: 'Search persistent memory for relevant information.', group: 'core' },
+	{
+		name: 'ask_user',
+		description: 'Ask the user one or more clarifying questions with predefined answer options.',
+		group: 'core',
+	},
 	{ name: 'shell', description: 'Run a shell command in the sandboxed environment.', group: 'sandbox' },
 	{
 		name: 'file_read',

@@ -133,11 +133,15 @@
 
 	function onTrayTouchEnd() {
 		if (trayDragging && trayDragY > 100) {
-			expanded = false;
-			search = '';
+			closeChatList();
 		}
 		trayDragY = 0;
 		trayDragging = false;
+	}
+
+	function closeChatList() {
+		expanded = false;
+		search = '';
 	}
 
 	async function handleNewChat(initialPrompt?: string) {
@@ -190,7 +194,7 @@
 
 		<!-- Recent chats (visible when sidebar is hidden) -->
 		{#if recentChats.length > 0}
-			<div class="w-full space-y-2 text-left lg:hidden">
+			<div class="w-full space-y-2 text-left xl:hidden">
 				<h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/40">Recent chats</h2>
 				<div class="space-y-0.5">
 					{#each recentChats.slice(0, 5) as chat (chat.id)}
@@ -220,12 +224,39 @@
 </div>
 
 <!-- Chat tray — slides up from bottom, overlays the content -->
+{#snippet ChatGroups()}
+	{#if filtered.length === 0}
+		<p class="py-6 text-center text-sm text-base-content/40">
+			{search ? 'No matches' : 'No conversations yet'}
+		</p>
+	{:else}
+		{#each grouped as group (group.label)}
+			<div>
+				<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
+				<div class="space-y-0.5">
+					{#each group.items as chat (chat.id)}
+						<a
+							href={`/chat/${chat.id}`}
+							class="chat-list-item block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
+						>
+							<span class="line-clamp-1 font-medium">{chat.title}</span>
+							<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
+								{chat.lastMessage ?? 'No messages yet'}
+							</span>
+						</a>
+					{/each}
+				</div>
+			</div>
+		{/each}
+	{/if}
+{/snippet}
+
 {#if expanded}
 	<!-- Scrim -->
 	<button
 		type="button"
 		class="chat-tray-scrim fixed inset-0 z-10"
-		onclick={() => { expanded = false; search = ''; }}
+		onclick={closeChatList}
 		aria-label="Close chat list"
 		transition:fade={{ duration: 200 }}
 	></button>
@@ -233,7 +264,7 @@
 	<!-- Tray panel -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl sm:rounded-t-3xl xl:pb-0 lg:hidden"
+		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl sm:rounded-t-3xl xl:pb-0 md:hidden"
 		style="transform: translateY({trayDragging && trayDragY > 0 ? trayDragY + 'px' : '0'}); transition: {trayDragging ? 'none' : 'transform 200ms ease-out'};"
 		transition:fly={{ y: 400, duration: 380, easing: cubicOut }}
 		ontouchstart={onTrayTouchStart}
@@ -272,30 +303,50 @@
 
 		<!-- Scrollable list -->
 		<div bind:this={trayScrollEl} class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-none px-4 pb-6">
-			{#if filtered.length === 0}
-				<p class="py-6 text-center text-sm text-base-content/40">
-					{search ? 'No matches' : 'No conversations yet'}
-				</p>
-			{:else}
-				{#each grouped as group (group.label)}
-					<div>
-						<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
-						<div class="space-y-0.5">
-							{#each group.items as chat (chat.id)}
-								<a
-									href={`/chat/${chat.id}`}
-									class="chat-list-item block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
-								>
-									<span class="line-clamp-1 font-medium">{chat.title}</span>
-									<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
-										{chat.lastMessage ?? 'No messages yet'}
-									</span>
-								</a>
-							{/each}
+			{@render ChatGroups()}
+		</div>
+	</div>
+
+	<!-- Tablet modal panel -->
+	<div class="fixed inset-0 z-20 hidden px-5 py-8 md:flex xl:hidden" transition:fade={{ duration: 180 }}>
+		<div class="mx-auto flex h-full w-full max-w-4xl items-stretch">
+			<div
+				class="flex w-full min-h-0 flex-col overflow-hidden rounded-3xl border border-base-300 bg-base-100/95 shadow-2xl backdrop-blur-xl"
+				transition:scale={{ duration: 220, start: 0.96, easing: cubicOut }}
+			>
+				<div class="shrink-0 border-b border-base-300/70 px-6 py-5">
+					<div class="flex items-center gap-4">
+						<div class="min-w-0 flex-1">
+							<p class="text-xs font-semibold uppercase tracking-[0.14em] text-base-content/45">Conversation browser</p>
+							<h2 class="mt-1 text-2xl font-semibold tracking-tight">All chats</h2>
 						</div>
+						<span class="badge badge-outline badge-lg">{filtered.length}</span>
+						<button type="button" class="btn btn-ghost btn-sm" onclick={closeChatList} aria-label="Close chat list">Close</button>
 					</div>
-				{/each}
-			{/if}
+					<div class="mt-4 flex items-center gap-3">
+						<div class="join" role="group" aria-label="Group chats">
+							<button
+								class="join-item btn btn-sm {groupMode === 'date' ? 'btn-primary' : 'btn-ghost'}"
+								onclick={() => (groupMode = 'date')}
+							>Date</button>
+							<button
+								class="join-item btn btn-sm {groupMode === 'category' ? 'btn-primary' : 'btn-ghost'}"
+								onclick={() => (groupMode = 'category')}
+							>Category</button>
+						</div>
+						<input
+							type="text"
+							class="input input-bordered w-full"
+							placeholder="Search chats…"
+							bind:value={search}
+							aria-label="Search chats"
+						/>
+					</div>
+				</div>
+				<div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-6 pt-4">
+					{@render ChatGroups()}
+				</div>
+			</div>
 		</div>
 	</div>
 {/if}

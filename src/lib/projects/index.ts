@@ -1,0 +1,15 @@
+export {
+	listProjectsQuery,
+	getProjectByIdQuery,
+	createProjectCommand,
+	setProjectStatusCommand,
+	listProjectGoalsQuery,
+	createProjectGoalCommand,
+	setProjectGoalStatusCommand,
+	listProjectStrategiesQuery,
+	createDraftStrategyCommand,
+	submitStrategyCommand,
+	approveStrategyCommand,
+	rejectStrategyCommand,
+	getActiveProjectForRequest,
+} from '$lib/projects/projects.remote'
