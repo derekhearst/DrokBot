@@ -187,3 +187,10 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 | `/dashboard/cost`           | Cost tracking + budgets            |
 | `/activity`                 | Activity event feed                |
 | `/settings`                 | Configuration + notifications      |
+
+## Responsive Breakpoint Contract
+
+- mobile: default styles below 48rem (768px)
+- tablet: `tablet:` utilities at 48rem and above
+- desktop: `desktop:` utilities at 80rem (1280px) and above
+- canonical breakpoint variables are defined in `src/routes/layout.css` and legacy aliases are mapped for compatibility

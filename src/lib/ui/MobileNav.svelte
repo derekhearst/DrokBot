@@ -55,7 +55,7 @@
 	] as const;
 </script>
 
-<nav class="z-20 mx-auto flex w-full max-w-400 justify-center px-3 py-2 sm:hidden safe-bottom {slideOff ? 'mobile-nav-slide-off' : ''}">
+<nav class="z-20 mx-auto flex w-full max-w-400 justify-center px-3 py-2 tablet:hidden safe-bottom {slideOff ? 'mobile-nav-slide-off' : ''}">
 	<div class="flex w-full items-center justify-around rounded-2xl border border-base-300/50 bg-base-100/80 px-1 py-1 shadow-lg shadow-black/20 backdrop-blur-xl">
 		{#each navItems as item}
 			<a

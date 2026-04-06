@@ -1,6 +1,18 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
 
+@theme {
+	/* Canonical responsive tiers */
+	--breakpoint-tablet: 48rem;
+	--breakpoint-desktop: 80rem;
+
+	/* Legacy aliases mapped to canonical tiers */
+	--breakpoint-sm: var(--breakpoint-tablet);
+	--breakpoint-md: var(--breakpoint-tablet);
+	--breakpoint-lg: var(--breakpoint-desktop);
+	--breakpoint-xl: var(--breakpoint-desktop);
+}
+
 @plugin 'daisyui/theme' {
 	name: 'AGENTSTUDIO-night';
 	default: true;
@@ -113,8 +125,8 @@ body::after {
 	view-transition-name: chat-composer-shell;
 }
 
-/* Mobile: keep composer full-width with small side padding */
-@media (max-width: 1279px) {
+/* Mobile + tablet: keep composer full-width with small side padding */
+@media (max-width: 79.99875rem) {
 	.chat-composer-transition {
 		max-width: none;
 		min-width: 0;
@@ -123,8 +135,8 @@ body::after {
 	}
 }
 
-/* Below xl: chat and home pages go truly edge-to-edge */
-@media (max-width: 1279px) {
+/* Below desktop: chat and home pages go truly edge-to-edge */
+@media (max-width: 79.99875rem) {
 	.mobile-chat-main {
 		padding: 0.5rem 0 0 !important;
 		border: none !important;

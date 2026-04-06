@@ -42,6 +42,19 @@ Build note: `bun run build` skips database bootstrap entirely. `DATABASE_URL` is
 - Playwright E2E
 - Adapter Node + Docker (TrueNAS deployment target)
 
+## Responsive Breakpoints
+
+AGENTSTUDIO now uses a canonical three-tier responsive system:
+
+- mobile: default styles below 48rem (768px)
+- tablet: `tablet:` utilities at 48rem and above
+- desktop: `desktop:` utilities at 80rem (1280px) and above
+
+Implementation details:
+
+- The canonical tokens are defined in `src/routes/layout.css` via Tailwind v4 `@theme` breakpoint variables.
+- Legacy aliases (`sm`, `md`, `lg`, `xl`) are mapped to these tiers for compatibility, but new work should prefer `tablet:` and `desktop:` utilities.
+
 ## Getting Started
 
 1. Install dependencies:

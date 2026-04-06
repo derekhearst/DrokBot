@@ -71,7 +71,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <!-- Desktop: inline sidebar column -->
-<aside class="hidden overflow-y-auto rounded-3xl border border-base-300 bg-base-100/80 p-4 shadow-sm xl:block {className}">
+<aside class="hidden overflow-y-auto rounded-3xl border border-base-300 bg-base-100/80 p-4 shadow-sm desktop:block {className}">
 	{#if children}{@render children()}{/if}
 </aside>
 
@@ -79,14 +79,14 @@
 {#if open}
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm sm:hidden"
+		class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm tablet:hidden"
 		onclick={handleOverlayClick}
 		onkeydown={handleKeydown}
 	></div>
 {/if}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <aside
-	class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100 shadow-lg sm:hidden {className}"
+	class="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100 shadow-lg tablet:hidden {className}"
 	style="transform: {mobilePanelTransform}; transition: {mobilePanelTransition};"
 	ontouchstart={onTouchStart}
 	ontouchmove={onTouchMove}

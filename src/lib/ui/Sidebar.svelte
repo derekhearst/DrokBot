@@ -12,13 +12,13 @@
 	}
 </script>
 
-<aside class="flex h-full w-48 flex-col rounded-2xl border border-base-300/50 bg-base-100/85 shadow-lg shadow-black/20 backdrop-blur-sm xl:w-56">
+<aside class="flex h-full w-48 flex-col rounded-2xl border border-base-300/50 bg-base-100/85 shadow-lg shadow-black/20 backdrop-blur-sm desktop:w-56">
 	<!-- Brand / user header -->
 	<div class="brand-row flex items-center gap-2.5 border-b border-base-300/50 px-3 py-3 rounded-t-2xl">
 		<img src={favicon} alt="Agent Studio" class="size-8 shrink-0" />
 		<div class="brand-copy min-w-0">
 			<p class="truncate text-sm leading-tight"><span class="font-light tracking-wide">Agent</span><span class="font-bold">Studio</span></p>
-			<p class="hidden truncate text-[10px] opacity-50 xl:block">Autonomous Agent Console</p>
+			<p class="hidden truncate text-[10px] opacity-50 desktop:block">Autonomous Agent Console</p>
 		</div>
 	</div>
 

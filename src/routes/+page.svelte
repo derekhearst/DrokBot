@@ -164,12 +164,12 @@
 
 <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
 <!-- Default new-chat view (always rendered) -->
-<div class="flex flex-1 flex-col items-center px-2 pt-12 sm:justify-center sm:px-0 sm:pt-0">
-	<div class="w-full max-w-2xl space-y-4 text-center sm:space-y-8">
+<div class="flex flex-1 flex-col items-center px-2 pt-12 tablet:justify-center tablet:px-0 tablet:pt-0">
+	<div class="w-full max-w-2xl space-y-4 text-center tablet:space-y-8">
 		<!-- Greeting -->
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight text-base-content/90 sm:text-4xl">{greeting}, Derek</h1>
-			<p class="mt-1 text-sm text-base-content/50 sm:mt-2 sm:text-lg">How can I help you today?</p>
+			<h1 class="text-2xl font-semibold tracking-tight text-base-content/90 tablet:text-4xl">{greeting}, Derek</h1>
+			<p class="mt-1 text-sm text-base-content/50 tablet:mt-2 tablet:text-lg">How can I help you today?</p>
 		</div>
 
 		<!-- Input Area -->
@@ -194,7 +194,7 @@
 
 		<!-- Recent chats (visible when sidebar is hidden) -->
 		{#if recentChats.length > 0}
-			<div class="w-full space-y-2 text-left xl:hidden">
+			<div class="w-full space-y-2 text-left desktop:hidden">
 				<h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/40">Recent chats</h2>
 				<div class="space-y-0.5">
 					{#each recentChats.slice(0, 5) as chat (chat.id)}
@@ -264,7 +264,7 @@
 	<!-- Tray panel -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl sm:rounded-t-3xl xl:pb-0 md:hidden"
+		class="chat-tray fixed inset-x-0 bottom-0 z-20 flex max-h-[80vh] flex-col rounded-t-2xl border-t border-base-300 bg-base-100/95 pb-14 shadow-2xl backdrop-blur-xl tablet:rounded-t-3xl desktop:pb-0 tablet:hidden"
 		style="transform: translateY({trayDragging && trayDragY > 0 ? trayDragY + 'px' : '0'}); transition: {trayDragging ? 'none' : 'transform 200ms ease-out'};"
 		transition:fly={{ y: 400, duration: 380, easing: cubicOut }}
 		ontouchstart={onTrayTouchStart}
@@ -308,7 +308,7 @@
 	</div>
 
 	<!-- Tablet modal panel -->
-	<div class="fixed inset-0 z-20 hidden px-5 py-8 md:flex xl:hidden" transition:fade={{ duration: 180 }}>
+	<div class="fixed inset-0 z-20 hidden px-5 py-8 tablet:flex desktop:hidden" transition:fade={{ duration: 180 }}>
 		<div class="mx-auto flex h-full w-full max-w-4xl items-stretch">
 			<div
 				class="flex w-full min-h-0 flex-col overflow-hidden rounded-3xl border border-base-300 bg-base-100/95 shadow-2xl backdrop-blur-xl"

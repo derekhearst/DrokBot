@@ -504,7 +504,7 @@
 		animation: slideDown 150ms ease-in forwards;
 		will-change: transform, opacity;
 	}
-	@media (min-width: 640px) {
+	@media (min-width: 48rem) {
 		.modal-panel {
 			animation: scaleIn 200ms ease-out;
 		}

@@ -132,8 +132,8 @@
 {#if isLoginRoute}
 	{@render children()}
 {:else}
-	<div class="relative flex h-screen flex-col overflow-hidden sm:flex-row">
-		<div class="hidden shrink-0 p-3 pr-0 sm:block">
+	<div class="relative flex h-screen flex-col overflow-hidden tablet:flex-row">
+		<div class="hidden shrink-0 p-3 pr-0 tablet:block">
 			<Sidebar activePath={page.url.pathname} />
 		</div>
 
@@ -142,8 +142,8 @@
 				<MobileNav activePath={page.url.pathname} slideOff={true} />
 			{/if}
 
-			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 lg:gap-3 lg:p-3 xl:p-3 {showAside ? 'xl:grid-cols-[minmax(0,1fr)_320px]' : ''}">
-				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 lg:rounded-3xl lg:border lg:border-base-300 lg:bg-base-100/85 lg:px-4 lg:pt-3 lg:pb-4 lg:shadow-sm xl:px-6 xl:pt-3 xl:pb-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
+			<div class="mx-auto grid min-h-0 w-full max-w-400 flex-1 grid-rows-[1fr] gap-0 p-0 tablet:gap-3 tablet:p-3 desktop:p-3 {showAside ? 'desktop:grid-cols-[minmax(0,1fr)_320px]' : ''}">
+				<main class="relative flex min-h-0 flex-col overflow-y-auto p-2 tablet:rounded-3xl tablet:border tablet:border-base-300 tablet:bg-base-100/85 tablet:px-4 tablet:pt-3 tablet:pb-4 tablet:shadow-sm desktop:px-6 desktop:pt-3 desktop:pb-6 {isChatOrHome ? 'mobile-chat-main' : ''}">
 					{@render children()}
 				</main>
 

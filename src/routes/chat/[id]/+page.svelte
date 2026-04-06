@@ -698,13 +698,13 @@
 </script>
 
 <div class="flex min-h-0 w-full flex-1 gap-0" class:artifact-split={artifactPanelMode === 'panel'}>
-	<section class="flex min-h-0 flex-1 flex-col gap-1 px-1 pt-0 pb-2 sm:px-0" class:max-w-full={artifactPanelMode !== 'panel'}>
+	<section class="relative flex min-h-0 flex-1 flex-col gap-1 px-1 pt-0 pb-1 sm:px-0 lg:pb-0" class:max-w-full={artifactPanelMode !== 'panel'}>
 		{#if !conversationData}
 			<div class="flex flex-1 items-center justify-center">
 				<span class="loading loading-spinner loading-sm opacity-50"></span>
 			</div>
 		{:else}
-			<div class="chat-detail-header flex items-center gap-2 px-2 py-1.5 lg:px-3 lg:py-2">
+			<div class="chat-detail-header flex items-center gap-2 px-2 py-1.5 lg:absolute lg:top-2 lg:left-2 lg:right-2 lg:z-20 lg:px-3 lg:py-2">
 				<button onclick={() => goto('/')} class="btn btn-ghost btn-sm btn-circle lg:hidden" aria-label="Back to chats">
 					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
 				</button>
@@ -725,7 +725,7 @@
 				</div>
 			{/if}
 
-			<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-2 overflow-y-auto px-0.5 py-1">
+			<div bind:this={messagesEl} class="min-h-0 flex-1 space-y-2 overflow-y-auto px-0.5 py-1 lg:pt-12">
 				{#each displayedMessages as message (message.id)}
 					<MessageBubble {message} artifacts={conversationArtifacts} onEdit={handleEdit} onRegenerate={handleRegenerate} onOpenArtifact={openArtifact} />
 				{/each}
