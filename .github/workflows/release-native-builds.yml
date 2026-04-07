@@ -3,6 +3,7 @@ name: Build Native Release Artifacts
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   build-windows-exe:
@@ -58,13 +59,29 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Rust (Android target)
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
+
+      - name: Configure Android SDK env
+        run: |
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+
+      - name: Accept Android SDK licenses (non-interactive)
+        run: yes | sdkmanager --licenses > /dev/null
+
+      - name: Install required Android SDK packages
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;27.0.12077973" \
+            "cmdline-tools;latest"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
