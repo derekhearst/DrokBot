@@ -5,6 +5,9 @@ description = "A Tauri app for DrokBot"
 edition = "2021"
 rust-version = "1.60"
 
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
