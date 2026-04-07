@@ -179,6 +179,20 @@ async function hasAppliedMigrations() {
 
 async function getLastAppliedMigrationMillis() {
 	const runtimeClient = getRuntimeClient()
+
+	const [migrationTable] = await runtimeClient<{ exists: boolean }[]>`
+		SELECT EXISTS(
+			SELECT 1
+			FROM information_schema.tables
+			WHERE table_schema = ${MIGRATIONS_SCHEMA}
+				AND table_name = ${MIGRATIONS_TABLE}
+		) AS "exists"
+	`
+
+	if (!migrationTable?.exists) {
+		return null
+	}
+
 	const [row] = await runtimeClient<{ createdAt: number | null }[]>`
 		SELECT MAX(created_at)::bigint AS "createdAt"
 		FROM "drizzle"."__drizzle_migrations"
