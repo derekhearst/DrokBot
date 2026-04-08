@@ -141,6 +141,7 @@ AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 
 - Multi-user account system with lowercase usernames
 - WebAuthn passkey login and account claiming
+- Native app webviews without WebAuthn support can hand off login to the system browser from `/login`
 - First startup seeds an unclaimed `admin` account with a one-time bootstrap claim key
 - Admin-only user management page for add/remove (soft-delete) accounts
 - Server hook enforces authentication and admin-only routes (`/users`)

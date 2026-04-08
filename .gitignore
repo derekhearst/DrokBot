@@ -38,3 +38,6 @@ src-tauri/icons/*
 # Tauri Rust build artifacts
 src-tauri/target/
 src-tauri/Cargo.lock
+
+# Tauri generated mobile/android project and schemas
+src-tauri/gen/

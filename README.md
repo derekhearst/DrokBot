@@ -135,6 +135,7 @@ Notes:
 ## Auth and Users
 
 - Authentication uses WebAuthn passkeys (no OAuth or password login).
+- Native mobile/desktop webviews that do not expose WebAuthn now show an Open in browser to sign in fallback on the login page.
 - On first startup, the server seeds an unclaimed `admin` account and logs a one-time bootstrap claim URL/key.
 - Admins create new accounts from `/users`.
 - Accounts are claimed by the first successful passkey registration for that username.
