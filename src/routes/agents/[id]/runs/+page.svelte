@@ -1,4 +1,4 @@
-<svelte:head><title>{agentData?.agent.name ?? 'Agent'} Runs | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>{agentData?.agent.name ?? 'Agent'} Runs | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

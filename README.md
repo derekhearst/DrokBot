@@ -1,4 +1,4 @@
-# AGENTSTUDIO
+# AgentStudio
 
 Self-hosted autonomous AI agent platform with persistent memory, user-scoped tool sandboxes, and passkey authentication.
 
@@ -6,7 +6,7 @@ Self-hosted autonomous AI agent platform with persistent memory, user-scoped too
 
 ### Chat and Tooling
 
-AGENTSTUDIO provides a streaming chat interface where the assistant can call tools such as web search and sandboxed code execution. The filesystem toolset supports ranged file reads, full writes, unified-diff patch apply, deterministic string replace, recursive directory listing, search, move/rename, delete, and file metadata lookups. Chat supports editing and branching, interleaved tool and thinking blocks, per-message performance and cost metrics, model selection, and per-prompt reasoning effort selection.
+AgentStudio provides a streaming chat interface where the assistant can call tools such as web search and sandboxed code execution. The filesystem toolset supports ranged file reads, full writes, unified-diff patch apply, deterministic string replace, recursive directory listing, search, move/rename, delete, and file metadata lookups. Chat supports editing and branching, interleaved tool and thinking blocks, per-message performance and cost metrics, model selection, and per-prompt reasoning effort selection.
 
 ### Agents and Tasks
 
@@ -26,9 +26,9 @@ The dashboard is available at a dedicated route and shows live system totals, ta
 
 ### Database Bootstrap
 
-On server startup, AGENTSTUDIO now ensures the configured PostgreSQL database exists, installs the required extensions, and applies bundled Drizzle migrations before serving requests. The Postgres role in `DATABASE_URL` must be allowed to create the target database and install `pgcrypto` and `vector`.
+On server startup, AgentStudio now ensures the configured PostgreSQL database exists, installs the required extensions, and applies bundled Drizzle migrations before serving requests. The Postgres role in `DATABASE_URL` must be allowed to create the target database and install `pgcrypto` and `vector`.
 
-If the target database already contains AGENTSTUDIO tables or enums but has no recorded Drizzle migrations, startup treats that state as legacy unmanaged schema, wipes the app schemas, and then reapplies the bundled migrations from scratch.
+If the target database already contains AgentStudio tables or enums but has no recorded Drizzle migrations, startup treats that state as legacy unmanaged schema, wipes the app schemas, and then reapplies the bundled migrations from scratch.
 
 Build note: `bun run build` skips database bootstrap entirely. `DATABASE_URL` is only required when the server actually starts.
 
@@ -44,7 +44,7 @@ Build note: `bun run build` skips database bootstrap entirely. `DATABASE_URL` is
 
 ## Responsive Breakpoints
 
-AGENTSTUDIO now uses a canonical three-tier responsive system:
+AgentStudio now uses a canonical three-tier responsive system:
 
 - mobile: default styles below 48rem (768px)
 - tablet: `tablet:` utilities at 48rem and above
@@ -82,7 +82,7 @@ Database note:
 
 - `DATABASE_URL` should point at the final application database name even if that database does not exist yet.
 - The configured Postgres role must be able to create that database on first start and run `CREATE EXTENSION IF NOT EXISTS pgcrypto` and `CREATE EXTENSION IF NOT EXISTS vector`.
-- A database with existing AGENTSTUDIO schema objects but no Drizzle migration history will be reset on startup before migrations are applied.
+- A database with existing AgentStudio schema objects but no Drizzle migration history will be reset on startup before migrations are applied.
 
 4. Run the app:
 

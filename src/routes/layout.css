@@ -14,7 +14,7 @@
 }
 
 @plugin 'daisyui/theme' {
-	name: 'AGENTSTUDIO-night';
+	name: 'AgentStudio-night';
 	default: true;
 	prefersdark: true;
 	color-scheme: dark;

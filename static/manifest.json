@@ -1,6 +1,6 @@
 {
-	"name": "AGENTSTUDIO",
-	"short_name": "AGENTSTUDIO",
+	"name": "AgentStudio",
+	"short_name": "AgentStudio",
 	"description": "Self-hosted autonomous AI agent platform",
 	"start_url": "/",
 	"scope": "/",

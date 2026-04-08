@@ -40,8 +40,8 @@ RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" bun run build
 FROM base AS production
 WORKDIR /app
 
-RUN git config --global user.name "AGENTSTUDIO" \
-	&& git config --global user.email "AGENTSTUDIO@local" \
+RUN git config --global user.name "AgentStudio" \
+	&& git config --global user.email "AgentStudio@local" \
 	&& git config --global init.defaultBranch main
 
 COPY --from=deps /app/node_modules ./node_modules

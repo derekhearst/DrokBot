@@ -1,4 +1,4 @@
-<svelte:head><title>Chat | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Chat | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { browser } from '$app/environment';
@@ -14,7 +14,7 @@
 	let prompt = $state('');
 	let model = $state('anthropic/claude-sonnet-4');
 	type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
-	const REASONING_STORAGE_KEY = 'drokbot:reasoning-effort';
+	const REASONING_STORAGE_KEY = 'AgentStudio:reasoning-effort';
 	const VALID_REASONING_EFFORTS: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 	let reasoningEffort = $state<ReasoningEffort>('none');
 	let reasoningHydrated = $state(false);

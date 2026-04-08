@@ -30,7 +30,7 @@ function ensurePushConfigured() {
 	}
 
 	webpush.setVapidDetails(
-		env.ORIGIN ? `${env.ORIGIN}` : 'mailto:AGENTSTUDIO@localhost',
+		env.ORIGIN ? `${env.ORIGIN}` : 'mailto:AgentStudio@localhost',
 		env.VAPID_PUBLIC_KEY,
 		env.VAPID_PRIVATE_KEY,
 	)
@@ -80,14 +80,14 @@ export async function upsertPushSubscription(input: SubscriptionInput) {
 }
 
 export async function removePushSubscription(endpoint: string) {
-
-
 	await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint))
 	return { ok: true }
 }
 
 export async function removePushSubscriptionForUser(endpoint: string, userId: string) {
-	await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.endpoint, endpoint), eq(pushSubscriptions.userId, userId)))
+	await db
+		.delete(pushSubscriptions)
+		.where(and(eq(pushSubscriptions.endpoint, endpoint), eq(pushSubscriptions.userId, userId)))
 	return { ok: true }
 }
 
@@ -124,7 +124,11 @@ export async function markNotificationRead(notificationId: string, read = true, 
 	const [updated] = await db
 		.update(notifications)
 		.set({ read })
-		.where(userId ? and(eq(notifications.id, notificationId), eq(notifications.userId, userId)) : eq(notifications.id, notificationId))
+		.where(
+			userId
+				? and(eq(notifications.id, notificationId), eq(notifications.userId, userId))
+				: eq(notifications.id, notificationId),
+		)
 		.returning()
 	return updated
 }

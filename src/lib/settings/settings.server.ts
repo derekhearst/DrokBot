@@ -30,7 +30,7 @@ export const DEFAULT_SETTINGS = {
 		disabledTools: [] as string[],
 	},
 	systemPrompt: '',
-	theme: 'AGENTSTUDIO-night',
+	theme: 'AgentStudio-night',
 } as const
 
 export async function getOrCreateSettings(userId: string) {
@@ -97,7 +97,7 @@ export async function updateSettings(input: {
 		.set({
 			defaultModel: input.defaultModel ?? current.defaultModel,
 			transcriptionModel: input.transcriptionModel ?? current.transcriptionModel,
-			theme: 'AGENTSTUDIO-night',
+			theme: 'AgentStudio-night',
 			notificationPrefs: {
 				...current.notificationPrefs,
 				...(input.notificationPrefs ?? {}),

@@ -1,4 +1,4 @@
-<svelte:head><title>Artifacts | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Artifacts | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { onMount } from 'svelte'
@@ -159,7 +159,7 @@
 	{:else if artifacts.length === 0}
 		<div class="rounded-3xl border border-base-300 bg-base-100 p-8 text-center">
 			<p class="text-lg font-medium text-base-content/70">No artifacts found</p>
-			<p class="mt-1 text-sm text-base-content/50">Artifacts are created when AGENTSTUDIO generates code, documents, images, or other content in chat.</p>
+			<p class="mt-1 text-sm text-base-content/50">Artifacts are created when AgentStudio generates code, documents, images, or other content in chat.</p>
 		</div>
 	{:else}
 

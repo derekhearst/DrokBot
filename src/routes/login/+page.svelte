@@ -1,4 +1,4 @@
-<svelte:head><title>Login | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Login | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { goto } from '$app/navigation';
@@ -74,7 +74,7 @@
 <div class="min-h-screen flex items-center justify-center bg-base-200 px-4">
 	<div class="card w-full max-w-md bg-base-100 shadow-xl">
 		<div class="card-body">
-			<h1 class="card-title text-2xl">Sign in to AGENTSTUDIO</h1>
+			<h1 class="card-title text-2xl">Sign in to AgentStudio</h1>
 			<p class="text-sm opacity-70">Select your user account and continue with your passkey.</p>
 
 			<div class="mt-4 space-y-4">

@@ -1,4 +1,4 @@
-<svelte:head><title>Memory Detail | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Memory Detail | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

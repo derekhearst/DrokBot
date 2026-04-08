@@ -254,7 +254,7 @@
 		{recording}
 		{transcribing}
 		{speechSupported}
-		placeholder="Message AGENTSTUDIO..."
+		placeholder="Message AgentStudio..."
 		onSubmit={(content) => handleSubmit(content)}
 		onModelChange={(id) => onModelChange?.(id)}
 		onReasoningEffortChange={(effort) => onReasoningEffortChange?.(effort)}

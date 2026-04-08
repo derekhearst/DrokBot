@@ -1,4 +1,4 @@
-<svelte:head><title>{skill?.name ?? 'Skill'} | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>{skill?.name ?? 'Skill'} | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

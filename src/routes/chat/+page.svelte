@@ -1,4 +1,4 @@
-<svelte:head><title>Chat | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Chat | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { goto } from '$app/navigation';

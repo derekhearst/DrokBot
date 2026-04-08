@@ -1,4 +1,4 @@
-<svelte:head><title>Redirecting | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Redirecting | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { goto } from '$app/navigation';

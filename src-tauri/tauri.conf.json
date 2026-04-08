@@ -1,7 +1,7 @@
 {
-	"productName": "DrokBot",
+	"productName": "AgentStudio",
 	"version": "0.1.0",
-	"identifier": "com.drokbot.app",
+	"identifier": "com.agentstudio.app",
 	"build": {
 		"beforeDevCommand": "bun run tauri:icons && bun run dev",
 		"devUrl": "http://localhost:5173",
@@ -14,7 +14,7 @@
 				"fullscreen": false,
 				"height": 900,
 				"resizable": true,
-				"title": "DrokBot",
+				"title": "AgentStudio",
 				"width": 1200
 			}
 		],

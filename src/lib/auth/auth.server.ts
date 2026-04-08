@@ -6,7 +6,7 @@ import { and, eq, gt, isNull } from 'drizzle-orm'
 import { db } from '$lib/db.server'
 import { authSessions, bootstrapClaims, users, userRoleEnum } from '$lib/auth/auth.schema'
 
-const SESSION_COOKIE = 'AGENTSTUDIO_session'
+const SESSION_COOKIE = 'AgentStudio_session'
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 const BOOTSTRAP_CLAIM_TTL_MS = 1000 * 60 * 30
 

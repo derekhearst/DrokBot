@@ -25,7 +25,7 @@ export async function showToast(message: string, duration = 3000) {
 	if (isTauri()) {
 		const { sendNotification } = await import('@tauri-apps/plugin-notification')
 		await sendNotification({
-			title: 'DrokBot',
+			title: 'AgentStudio',
 			body: message,
 		})
 	} else {

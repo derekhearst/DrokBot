@@ -1,10 +1,51 @@
-CREATE TYPE "public"."activity_event_type" AS ENUM('task_created', 'task_status_changed', 'agent_action', 'memory_created', 'dream_cycle', 'chat_started', 'review_action', 'skill_created');--> statement-breakpoint
-CREATE TYPE "public"."agent_status" AS ENUM('active', 'paused', 'idle');--> statement-breakpoint
-CREATE TYPE "public"."review_type" AS ENUM('heavy', 'quick', 'informational');--> statement-breakpoint
-CREATE TYPE "public"."task_status" AS ENUM('pending', 'running', 'completed', 'failed', 'review', 'changes_requested');--> statement-breakpoint
-CREATE TYPE "public"."artifact_type" AS ENUM('markdown', 'code', 'config', 'image', 'svg', 'mermaid', 'html', 'svelte', 'data_table', 'chart', 'audio', 'video');--> statement-breakpoint
-CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system', 'tool');--> statement-breakpoint
-CREATE TYPE "public"."memory_relation_type" AS ENUM('supports', 'contradicts', 'depends_on', 'part_of');--> statement-breakpoint
+CREATE TYPE "public"."activity_event_type" AS ENUM(
+	'task_created',
+	'task_status_changed',
+	'agent_action',
+	'memory_created',
+	'dream_cycle',
+	'chat_started',
+	'review_action',
+	'skill_created'
+);
+--> statement-breakpoint
+CREATE TYPE "public"."agent_status" AS ENUM('active', 'paused', 'idle');
+--> statement-breakpoint
+CREATE TYPE "public"."review_type" AS ENUM('heavy', 'quick', 'informational');
+--> statement-breakpoint
+CREATE TYPE "public"."task_status" AS ENUM(
+	'pending',
+	'running',
+	'completed',
+	'failed',
+	'review',
+	'changes_requested'
+);
+--> statement-breakpoint
+CREATE TYPE "public"."artifact_type" AS ENUM(
+	'markdown',
+	'code',
+	'config',
+	'image',
+	'svg',
+	'mermaid',
+	'html',
+	'svelte',
+	'data_table',
+	'chart',
+	'audio',
+	'video'
+);
+--> statement-breakpoint
+CREATE TYPE "public"."message_role" AS ENUM('user', 'assistant', 'system', 'tool');
+--> statement-breakpoint
+CREATE TYPE "public"."memory_relation_type" AS ENUM(
+	'supports',
+	'contradicts',
+	'depends_on',
+	'part_of'
+);
+--> statement-breakpoint
 CREATE TABLE "activity_events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"type" "activity_event_type" NOT NULL,
@@ -208,7 +249,7 @@ CREATE TABLE "app_settings" (
 	"context_config" jsonb DEFAULT '{"reservedResponsePct":30,"autoCompactThresholdPct":72}'::jsonb NOT NULL,
 	"tool_config" jsonb DEFAULT '{"approvalMode":"auto"}'::jsonb NOT NULL,
 	"system_prompt" text DEFAULT '' NOT NULL,
-	"theme" text DEFAULT 'AGENTSTUDIO-night' NOT NULL,
+	"theme" text DEFAULT 'AgentStudio-night' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -222,7 +263,7 @@ CREATE TABLE "skill_files" (
 	"sort_order" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "skill_files_skill_id_name_unique" UNIQUE("skill_id","name")
+	CONSTRAINT "skill_files_skill_id_name_unique" UNIQUE("skill_id", "name")
 );
 --> statement-breakpoint
 CREATE TABLE "skills" (
@@ -230,7 +271,7 @@ CREATE TABLE "skills" (
 	"name" text NOT NULL,
 	"description" text NOT NULL,
 	"content" text NOT NULL,
-	"tags" text[] DEFAULT '{}' NOT NULL,
+	"tags" text [] DEFAULT '{}' NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
 	"access_count" integer DEFAULT 0 NOT NULL,
 	"last_accessed" timestamp with time zone,
@@ -239,20 +280,58 @@ CREATE TABLE "skills" (
 	CONSTRAINT "skills_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
-ALTER TABLE "agent_runs" ADD CONSTRAINT "agent_runs_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_runs" ADD CONSTRAINT "agent_runs_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_tasks" ADD CONSTRAINT "agent_tasks_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_comments" ADD CONSTRAINT "task_comments_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "task_messages" ADD CONSTRAINT "task_messages_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "artifact_versions" ADD CONSTRAINT "artifact_versions_artifact_id_artifacts_id_fk" FOREIGN KEY ("artifact_id") REFERENCES "public"."artifacts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "artifacts" ADD CONSTRAINT "artifacts_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "artifacts" ADD CONSTRAINT "artifacts_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "artifacts" ADD CONSTRAINT "artifacts_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "conversations" ADD CONSTRAINT "conversations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "memory_relations" ADD CONSTRAINT "memory_relations_source_memory_id_memories_id_fk" FOREIGN KEY ("source_memory_id") REFERENCES "public"."memories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "memory_relations" ADD CONSTRAINT "memory_relations_target_memory_id_memories_id_fk" FOREIGN KEY ("target_memory_id") REFERENCES "public"."memories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "notifications" ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "push_subscriptions" ADD CONSTRAINT "push_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "app_settings" ADD CONSTRAINT "app_settings_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "skill_files" ADD CONSTRAINT "skill_files_skill_id_skills_id_fk" FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "agent_runs"
+ADD CONSTRAINT "agent_runs_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "agent_runs"
+ADD CONSTRAINT "agent_runs_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE
+set null ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "agent_tasks"
+ADD CONSTRAINT "agent_tasks_agent_id_agents_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agents"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "task_comments"
+ADD CONSTRAINT "task_comments_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "task_messages"
+ADD CONSTRAINT "task_messages_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "artifact_versions"
+ADD CONSTRAINT "artifact_versions_artifact_id_artifacts_id_fk" FOREIGN KEY ("artifact_id") REFERENCES "public"."artifacts"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "artifacts"
+ADD CONSTRAINT "artifacts_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE
+set null ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "artifacts"
+ADD CONSTRAINT "artifacts_message_id_messages_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."messages"("id") ON DELETE
+set null ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "artifacts"
+ADD CONSTRAINT "artifacts_task_id_agent_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."agent_tasks"("id") ON DELETE
+set null ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "conversations"
+ADD CONSTRAINT "conversations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE
+set null ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "messages"
+ADD CONSTRAINT "messages_conversation_id_conversations_id_fk" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "memory_relations"
+ADD CONSTRAINT "memory_relations_source_memory_id_memories_id_fk" FOREIGN KEY ("source_memory_id") REFERENCES "public"."memories"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "memory_relations"
+ADD CONSTRAINT "memory_relations_target_memory_id_memories_id_fk" FOREIGN KEY ("target_memory_id") REFERENCES "public"."memories"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "notifications"
+ADD CONSTRAINT "notifications_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "push_subscriptions"
+ADD CONSTRAINT "push_subscriptions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "app_settings"
+ADD CONSTRAINT "app_settings_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+ALTER TABLE "skill_files"
+ADD CONSTRAINT "skill_files_skill_id_skills_id_fk" FOREIGN KEY ("skill_id") REFERENCES "public"."skills"("id") ON DELETE cascade ON UPDATE no action;

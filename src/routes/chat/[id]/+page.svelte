@@ -1,4 +1,4 @@
-<svelte:head><title>{conversationData?.conversation.title ?? 'Chat'} | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>{conversationData?.conversation.title ?? 'Chat'} | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { browser } from '$app/environment';
@@ -32,7 +32,7 @@
 	};
 
 	type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
-	const REASONING_STORAGE_KEY = 'drokbot:reasoning-effort';
+	const REASONING_STORAGE_KEY = 'AgentStudio:reasoning-effort';
 	const VALID_REASONING_EFFORTS: ReasoningEffort[] = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 
 	type AskUserOption = {

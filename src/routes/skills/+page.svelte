@@ -1,4 +1,4 @@
-<svelte:head><title>Skills | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Skills | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { onMount } from 'svelte';

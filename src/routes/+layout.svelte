@@ -62,8 +62,8 @@
 	onMount(() => {
 		if (!browser) return;
 
-		document.documentElement.setAttribute('data-theme', 'AGENTSTUDIO-night');
-		localStorage.setItem('AGENTSTUDIO-theme', 'AGENTSTUDIO-night');
+		document.documentElement.setAttribute('data-theme', 'AgentStudio-night');
+		localStorage.setItem('AgentStudio-theme', 'AgentStudio-night');
 
 		const root = document.documentElement;
 		let rafId = 0;

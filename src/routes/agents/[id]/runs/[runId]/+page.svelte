@@ -1,4 +1,4 @@
-<svelte:head><title>Run Detail | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Run Detail | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/state';

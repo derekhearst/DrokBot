@@ -1,6 +1,6 @@
 <script lang="ts">
 	let {
-		placeholder = 'Ask AGENTSTUDIO to do anything...',
+		placeholder = 'Ask AgentStudio to do anything...',
 		disabled = false,
 		onSubmit
 	} = $props<{

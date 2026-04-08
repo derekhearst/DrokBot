@@ -1,4 +1,4 @@
-<svelte:head><title>{artifact?.title ?? 'Artifact'} | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>{artifact?.title ?? 'Artifact'} | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { page } from '$app/stores'

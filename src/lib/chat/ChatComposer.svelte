@@ -17,7 +17,7 @@
 		busy = false,
 		model = 'anthropic/claude-sonnet-4',
 		reasoningEffort = 'none',
-		placeholder = 'Message AGENTSTUDIO...',
+		placeholder = 'Message AgentStudio...',
 		recording = false,
 		transcribing = false,
 		speechSupported = false,

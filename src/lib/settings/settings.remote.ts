@@ -10,7 +10,7 @@ import { capabilityGroups, estimateTokens, estimateToolDefinitionTokens } from '
 const settingsUpdateSchema = z.object({
 	defaultModel: z.string().trim().min(1).max(120).optional(),
 	transcriptionModel: z.string().trim().min(1).max(120).optional(),
-	theme: z.enum(['AGENTSTUDIO-night']).optional(),
+	theme: z.enum(['AgentStudio-night']).optional(),
 	notificationPrefs: z
 		.object({
 			taskCompleted: z.boolean().optional(),
@@ -142,6 +142,3 @@ export const getFullPromptPreview = query(async () => {
 		},
 	}
 })
-
-
-

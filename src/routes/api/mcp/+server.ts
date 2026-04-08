@@ -20,7 +20,7 @@ function verifyApiKey(request: Request): boolean {
 
 // MCP Server Info
 const SERVER_INFO = {
-	name: 'AGENTSTUDIO',
+	name: 'AgentStudio',
 	version: '1.0.0',
 	protocolVersion: '2024-11-05',
 	capabilities: {
@@ -272,15 +272,15 @@ function schemaToJsonSchema(name: ToolName) {
 function listResources() {
 	return [
 		{
-			uri: 'AGENTSTUDIO://memories',
+			uri: 'AgentStudio://memories',
 			name: 'Memories',
 			description: 'Stored knowledge and facts',
 			mimeType: 'application/json',
 		},
-		{ uri: 'AGENTSTUDIO://agents', name: 'Agents', description: 'Configured AI agents', mimeType: 'application/json' },
-		{ uri: 'AGENTSTUDIO://tasks', name: 'Tasks', description: 'Agent task queue', mimeType: 'application/json' },
+		{ uri: 'AgentStudio://agents', name: 'Agents', description: 'Configured AI agents', mimeType: 'application/json' },
+		{ uri: 'AgentStudio://tasks', name: 'Tasks', description: 'Agent task queue', mimeType: 'application/json' },
 		{
-			uri: 'AGENTSTUDIO://conversations',
+			uri: 'AgentStudio://conversations',
 			name: 'Conversations',
 			description: 'Chat conversation history',
 			mimeType: 'application/json',
@@ -289,19 +289,19 @@ function listResources() {
 }
 
 async function readResource(uri: string) {
-	if (uri === 'AGENTSTUDIO://memories') {
+	if (uri === 'AgentStudio://memories') {
 		const rows = await db.select().from(memories).orderBy(desc(memories.createdAt)).limit(100)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'AGENTSTUDIO://agents') {
+	if (uri === 'AgentStudio://agents') {
 		const rows = await db.select().from(agents).orderBy(desc(agents.createdAt))
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'AGENTSTUDIO://tasks') {
+	if (uri === 'AgentStudio://tasks') {
 		const rows = await db.select().from(agentTasks).orderBy(desc(agentTasks.createdAt)).limit(100)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
-	if (uri === 'AGENTSTUDIO://conversations') {
+	if (uri === 'AgentStudio://conversations') {
 		const rows = await db.select().from(conversations).orderBy(desc(conversations.createdAt)).limit(50)
 		return [{ uri, mimeType: 'application/json', text: JSON.stringify(rows) }]
 	}
@@ -345,7 +345,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				return json(
 					rpcResponse(body.id, {
 						...SERVER_INFO,
-						instructions: 'AGENTSTUDIO MCP server — exposes tools, memories, agents, tasks, and conversations.',
+						instructions: 'AgentStudio MCP server — exposes tools, memories, agents, tasks, and conversations.',
 					}),
 				)
 

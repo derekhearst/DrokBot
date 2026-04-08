@@ -4,7 +4,7 @@ test('serves web manifest', async ({ request }) => {
 	const response = await request.get('/manifest.json')
 	expect(response.ok()).toBeTruthy()
 	const manifest = await response.json()
-	expect(manifest.name).toContain('AGENTSTUDIO')
+	expect(manifest.name).toContain('AgentStudio')
 	expect(manifest.display).toBe('standalone')
 	expect(Array.isArray(manifest.icons)).toBeTruthy()
 })

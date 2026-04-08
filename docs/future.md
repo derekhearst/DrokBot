@@ -1,4 +1,4 @@
-# AGENTSTUDIO — Future Features
+# AgentStudio — Future Features
 
 > Planned features not yet implemented, roughly ordered by dependency.
 

@@ -9,8 +9,8 @@ const sql = postgres({
 })
 
 try {
-	await sql`CREATE DATABASE "AGENTSTUDIO" TEMPLATE template0`
-	console.log('Database AGENTSTUDIO created successfully.')
+	await sql`CREATE DATABASE "AgentStudio" TEMPLATE template0`
+	console.log('Database AgentStudio created successfully.')
 } catch (e: any) {
 	console.error('Error:', e.message)
 } finally {

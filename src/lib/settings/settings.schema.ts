@@ -46,7 +46,7 @@ export const appSettings = pgTable('app_settings', {
 		.notNull()
 		.default({ approvalMode: 'auto', disabledTools: [] }),
 	systemPrompt: text('system_prompt').notNull().default(''),
-	theme: text('theme').notNull().default('AGENTSTUDIO-night'),
+	theme: text('theme').notNull().default('AgentStudio-night'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })

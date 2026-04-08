@@ -101,7 +101,7 @@ export async function beginPasskeyRegistration(input: {
 		.where(eq(userPasskeys.userId, user.id))
 
 	const options = await generateRegistrationOptions({
-		rpName: 'AGENTSTUDIO',
+		rpName: 'AgentStudio',
 		rpID: input.rpID,
 		userName: user.username,
 		userID: userIdToBytes(user.id),

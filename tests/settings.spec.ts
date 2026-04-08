@@ -16,7 +16,7 @@ test('saves, persists, resets, and updates notification feed from settings', asy
 			.first()
 
 		await preferencesSection.getByLabel('Default Model').fill('openai/gpt-4o-mini')
-		await preferencesSection.locator('select.select.select-bordered').first().selectOption('AGENTSTUDIO-night')
+		await preferencesSection.locator('select.select.select-bordered').first().selectOption('AgentStudio-night')
 		await preferencesSection.getByLabel('Task completed alerts').uncheck()
 		await page.getByRole('button', { name: /save settings/i }).click()
 		await expect(page.getByText(/settings saved\./i)).toBeVisible()
@@ -28,7 +28,7 @@ test('saves, persists, resets, and updates notification feed from settings', asy
 			.first()
 		await expect(reloadedPreferencesSection.getByLabel('Default Model')).toHaveValue('openai/gpt-4o-mini')
 		await expect(reloadedPreferencesSection.locator('select.select.select-bordered').first()).toHaveValue(
-			'AGENTSTUDIO-night',
+			'AgentStudio-night',
 		)
 		await expect(reloadedPreferencesSection.getByLabel('Task completed alerts')).not.toBeChecked()
 

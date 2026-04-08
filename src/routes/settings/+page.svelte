@@ -1,4 +1,4 @@
-<svelte:head><title>Settings | AGENTSTUDIO</title></svelte:head>
+<svelte:head><title>Settings | AgentStudio</title></svelte:head>
 
 <script lang="ts">
 	import { browser } from '$app/environment';
@@ -81,10 +81,10 @@
 		pushEnabled = subs.length > 0;
 	}
 
-	function applyTheme(theme: 'AGENTSTUDIO-night') {
+	function applyTheme(theme: 'AgentStudio-night') {
 		if (!browser) return;
 		document.documentElement.setAttribute('data-theme', theme);
-		localStorage.setItem('AGENTSTUDIO-theme', theme);
+		localStorage.setItem('AgentStudio-theme', theme);
 	}
 
 	async function saveSettings() {
@@ -95,7 +95,7 @@
 			const updated = await updateAppSettings({
 				defaultModel: settings.defaultModel,
 				transcriptionModel: settings.transcriptionModel,
-				theme: 'AGENTSTUDIO-night',
+				theme: 'AgentStudio-night',
 				notificationPrefs: settings.notificationPrefs,
 				dreamConfig: settings.dreamConfig,
 				budgetConfig: settings.budgetConfig,
@@ -104,7 +104,7 @@
 				systemPrompt: settings.systemPrompt,
 			});
 			settings = updated;
-			applyTheme('AGENTSTUDIO-night');
+			applyTheme('AgentStudio-night');
 			statusMessage = 'Settings saved.';
 		} finally {
 			busy = false;
@@ -118,7 +118,7 @@
 		try {
 			const updated = await resetAppSettings();
 			settings = updated;
-			applyTheme('AGENTSTUDIO-night');
+			applyTheme('AgentStudio-night');
 			statusMessage = 'Settings reset to defaults.';
 		} finally {
 			busy = false;
@@ -430,7 +430,7 @@
 						class="textarea textarea-bordered mt-3 w-full font-mono text-xs leading-relaxed"
 						rows="6"
 						maxlength="12000"
-						placeholder="e.g. You are AGENTSTUDIO, a helpful AI assistant with access to tools..."
+						placeholder="e.g. You are AgentStudio, a helpful AI assistant with access to tools..."
 						bind:value={settings.systemPrompt}
 					></textarea>
 					<p class="mt-1 text-right text-[10px] text-base-content/30">{settings.systemPrompt?.length ?? 0} / 12000</p>

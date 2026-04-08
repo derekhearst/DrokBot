@@ -95,16 +95,29 @@ jobs:
       - name: Build Android APK
         run: bunx tauri android build --apk --target aarch64
 
-      - name: Collect APK artifacts
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+
+      - name: Sign APK
         run: |
+          APK_PATH=$(find src-tauri -type f -name "*.apk" | head -1)
           mkdir -p dist/android
-          find src-tauri -type f -name "*.apk" -exec cp {} dist/android/ \;
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+            --ks keystore.jks \
+            --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --out dist/android/agentstudio.apk \
+            "$APK_PATH"
+
+      - name: Verify APK signature
+        run: $ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose dist/android/agentstudio.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: dist/android/*.apk
+          path: dist/android/agentstudio.apk
           if-no-files-found: error
 
   attach-assets-to-release:

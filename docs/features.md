@@ -1,10 +1,10 @@
-# AGENTSTUDIO — Feature Contract
+# AgentStudio — Feature Contract
 
 > Self-hosted autonomous AI agent platform. Chat, code, search, learn — from any device.
 
 ## Overview
 
-AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
+AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent you can chat with on the web and on mobile — running on your TrueNAS server, talking to your LLMs, learning from every interaction.
 
 **Single user, full control, zero cloud dependencies.**
 
@@ -130,7 +130,7 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 ### 13. Settings
 
 - Default model selection
-- Theme (AGENTSTUDIO-night)
+- Theme (AgentStudio-night)
 - Notification preferences
 - Dream cycle configuration (decay lambda, prune threshold)
 - Budget configuration (daily and monthly limits)
@@ -150,7 +150,7 @@ AGENTSTUDIO is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 - On startup, the server ensures the PostgreSQL database named in `DATABASE_URL` exists before handling requests
 - Required extensions are installed automatically: `pgcrypto` for UUID defaults and `vector` for memory embeddings
 - Bundled Drizzle SQL migrations are applied automatically on startup so container deploys do not require a separate manual migration step
-- If the database has AGENTSTUDIO schema objects but no recorded Drizzle migrations, startup resets the app schemas and reapplies migrations from scratch
+- If the database has AgentStudio schema objects but no recorded Drizzle migrations, startup resets the app schemas and reapplies migrations from scratch
 
 ---
 
