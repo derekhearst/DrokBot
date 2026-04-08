@@ -95,29 +95,69 @@ jobs:
       - name: Build Android APK
         run: bunx tauri android build --apk --target aarch64
 
-      - name: Decode keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
-
-      - name: Sign APK
+      - name: Debug signing secret presence (safe)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          APK_PATH=$(find src-tauri -type f -name "*.apk" | head -1)
-          mkdir -p dist/android
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
-            --ks keystore.jks \
-            --ks-pass "pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
-            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
-            --key-pass "pass:${{ secrets.ANDROID_KEY_PASSWORD }}" \
-            --out dist/android/agentstudio.apk \
-            "$APK_PATH"
+          is_set() {
+            if [ -n "$1" ]; then
+              echo true
+            else
+              echo false
+            fi
+          }
 
-      - name: Verify APK signature
-        run: $ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose dist/android/agentstudio.apk
+          echo "ANDROID_KEYSTORE_BASE64_PRESENT=$(is_set \"${ANDROID_KEYSTORE_BASE64:-}\")"
+          echo "ANDROID_KEYSTORE_PASSWORD_PRESENT=$(is_set \"${ANDROID_KEYSTORE_PASSWORD:-}\")"
+          echo "ANDROID_KEY_ALIAS_PRESENT=$(is_set \"${ANDROID_KEY_ALIAS:-}\")"
+          echo "ANDROID_KEY_PASSWORD_PRESENT=$(is_set \"${ANDROID_KEY_PASSWORD:-}\")"
+
+      - name: Prepare APK artifact (sign when secrets are available)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          APK_PATH=$(find src-tauri/gen/android/app/build/outputs/apk -type f -name "*.apk" | head -1 || true)
+          if [ -z "${APK_PATH:-}" ]; then
+            APK_PATH=$(find src-tauri -type f -name "*.apk" | head -1 || true)
+          fi
+
+          if [ -z "${APK_PATH:-}" ]; then
+            echo "No APK was produced by the Android build."
+            exit 1
+          fi
+
+          mkdir -p dist/android
+          cp "$APK_PATH" dist/android/app-unsigned.apk
+
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > keystore.jks
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign \
+              --ks keystore.jks \
+              --ks-pass "pass:${ANDROID_KEYSTORE_PASSWORD}" \
+              --ks-key-alias "${ANDROID_KEY_ALIAS}" \
+              --key-pass "pass:${ANDROID_KEY_PASSWORD}" \
+              --out dist/android/agentstudio.apk \
+              dist/android/app-unsigned.apk
+
+            "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose dist/android/agentstudio.apk
+          else
+            echo "Android signing secrets are missing; uploading unsigned APK instead."
+            mv dist/android/app-unsigned.apk dist/android/agentstudio-unsigned.apk
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: dist/android/agentstudio.apk
+          path: dist/android/*.apk
           if-no-files-found: error
 
   attach-assets-to-release:
