@@ -131,6 +131,101 @@
 	let pendingAskUser = $state<{ token: string; questions: AskUserQuestion[] } | null>(null);
 	let askUserModalOpen = $state(false);
 
+	type RetryIntent =
+		| {
+				kind: 'stream';
+				content: string;
+				regenerate: boolean;
+				attachments: ChatAttachment[];
+		  }
+		| {
+				kind: 'toolApproval';
+				token: string;
+				approved: boolean;
+		  }
+		| {
+				kind: 'planDecision';
+				token: string;
+				decision: 'approve' | 'deny' | 'continue';
+		  }
+		| {
+				kind: 'askUser';
+				answers: Record<string, string>;
+		  }
+		| {
+				kind: 'edit';
+				messageId: string;
+				content: string;
+		  };
+
+	let retryIntent = $state<RetryIntent | null>(null);
+	let retryBusy = $state(false);
+
+	function logChatUi(level: 'info' | 'warn' | 'error', message: string, context: Record<string, unknown> = {}) {
+		const payload = {
+			at: new Date().toISOString(),
+			conversationId,
+			model,
+			streaming,
+			...context,
+		};
+		if (level === 'error') {
+			console.error(`[chat/ui] ${message}`, payload);
+			return;
+		}
+		if (level === 'warn') {
+			console.warn(`[chat/ui] ${message}`, payload);
+			return;
+		}
+		console.info(`[chat/ui] ${message}`, payload);
+	}
+
+	function setRecoverableError(message: string, nextRetryIntent: RetryIntent | null, context: Record<string, unknown> = {}) {
+		streamError = message;
+		retryIntent = nextRetryIntent;
+		logChatUi('error', message, { recoverable: nextRetryIntent !== null, ...context });
+	}
+
+	function clearRecoverableError() {
+		streamError = null;
+		retryIntent = null;
+	}
+
+	async function retryLastAction() {
+		if (!retryIntent || retryBusy) return;
+		retryBusy = true;
+		const intent = retryIntent;
+		clearRecoverableError();
+		logChatUi('info', 'Retry requested', { intent: intent.kind });
+		try {
+			if (intent.kind === 'stream') {
+				await streamMessage(intent.content, intent.regenerate, intent.attachments);
+				return;
+			}
+			if (intent.kind === 'toolApproval') {
+				if (intent.approved) {
+					await approveToolCall(intent.token);
+				} else {
+					await denyToolCall(intent.token);
+				}
+				return;
+			}
+			if (intent.kind === 'planDecision') {
+				await decidePlan(intent.token, intent.decision);
+				return;
+			}
+			if (intent.kind === 'askUser') {
+				await resolveAskUser(intent.answers);
+				return;
+			}
+			await handleEdit(intent.messageId, intent.content);
+		} catch {
+			// Underlying handlers set the recoverable error and retry intent.
+		} finally {
+			retryBusy = false;
+		}
+	}
+
 	// Artifact panel state
 	type PanelMode = 'collapsed' | 'panel' | 'fullscreen';
 	let activeArtifact = $state<Awaited<ReturnType<typeof getArtifact>> | null>(null);
@@ -748,47 +843,85 @@
 	}
 
 	async function approveToolCall(token: string) {
-		await fetch(`/chat/${conversationId}/tool-approve`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, approved: true }),
-		});
-		streamingBlocks = streamingBlocks.map((b) =>
-			b.kind === 'tool' && b.token === token ? { ...b, status: 'approved' as const } : b
-		);
+		try {
+			const response = await fetch(`/chat/${conversationId}/tool-approve`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, approved: true }),
+			});
+			if (!response.ok) {
+				throw new Error(`Tool approval request failed with status ${response.status}`);
+			}
+			clearRecoverableError();
+			streamingBlocks = streamingBlocks.map((b) =>
+				b.kind === 'tool' && b.token === token ? { ...b, status: 'approved' as const } : b
+			);
+		} catch (error) {
+			setRecoverableError(
+				error instanceof Error ? error.message : 'Failed to approve tool call',
+				{ kind: 'toolApproval', token, approved: true },
+				{ token, action: 'approveToolCall' }
+			);
+			throw error;
+		}
 	}
 
 	async function denyToolCall(token: string) {
-		await fetch(`/chat/${conversationId}/tool-approve`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, approved: false }),
-		});
-		streamingBlocks = streamingBlocks.map((b) =>
-			b.kind === 'tool' && b.token === token ? { ...b, status: 'denied' as const } : b
-		);
+		try {
+			const response = await fetch(`/chat/${conversationId}/tool-approve`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, approved: false }),
+			});
+			if (!response.ok) {
+				throw new Error(`Tool denial request failed with status ${response.status}`);
+			}
+			clearRecoverableError();
+			streamingBlocks = streamingBlocks.map((b) =>
+				b.kind === 'tool' && b.token === token ? { ...b, status: 'denied' as const } : b
+			);
+		} catch (error) {
+			setRecoverableError(
+				error instanceof Error ? error.message : 'Failed to deny tool call',
+				{ kind: 'toolApproval', token, approved: false },
+				{ token, action: 'denyToolCall' }
+			);
+			throw error;
+		}
 	}
 
 	async function decidePlan(token: string, decision: 'approve' | 'deny' | 'continue') {
-		await fetch(`/chat/${conversationId}/plan-decide`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, decision }),
-		});
-
-		streamingBlocks = streamingBlocks.map((b) =>
-			b.kind === 'plan' && b.token === token
-				? {
-						...b,
-						status:
-							decision === 'approve'
-								? ('approved' as const)
-								: decision === 'continue'
-									? ('continued' as const)
-									: ('denied' as const),
-				  }
-				: b,
-		);
+		try {
+			const response = await fetch(`/chat/${conversationId}/plan-decide`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, decision }),
+			});
+			if (!response.ok) {
+				throw new Error(`Plan decision request failed with status ${response.status}`);
+			}
+			clearRecoverableError();
+			streamingBlocks = streamingBlocks.map((b) =>
+				b.kind === 'plan' && b.token === token
+					? {
+							...b,
+							status:
+								decision === 'approve'
+									? ('approved' as const)
+									: decision === 'continue'
+										? ('continued' as const)
+										: ('denied' as const),
+					  }
+					: b,
+			);
+		} catch (error) {
+			setRecoverableError(
+				error instanceof Error ? error.message : 'Failed to submit plan decision',
+				{ kind: 'planDecision', token, decision },
+				{ token, decision, action: 'decidePlan' }
+			);
+			throw error;
+		}
 	}
 
 	function buildAskUserAnswersFromFreeform(freeform: string): Record<string, string> {
@@ -806,18 +939,28 @@
 	async function resolveAskUser(answers: Record<string, string>) {
 		if (!pendingAskUser) return;
 		const { token } = pendingAskUser;
-		const response = await fetch(`/chat/${conversationId}/ask-user`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ token, answers }),
-		});
+		try {
+			const response = await fetch(`/chat/${conversationId}/ask-user`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ token, answers }),
+			});
 
-		if (!response.ok) {
-			throw new Error('Failed to submit ask_user answers');
+			if (!response.ok) {
+				throw new Error(`Failed to submit ask_user answers (status ${response.status})`);
+			}
+
+			clearRecoverableError();
+			pendingAskUser = null;
+			askUserModalOpen = false;
+		} catch (error) {
+			setRecoverableError(
+				error instanceof Error ? error.message : 'Failed to submit ask_user answers',
+				{ kind: 'askUser', answers },
+				{ token, answerCount: Object.keys(answers).length, action: 'resolveAskUser' }
+			);
+			throw error;
 		}
-
-		pendingAskUser = null;
-		askUserModalOpen = false;
 	}
 
 	function closeAskUserModal() {
@@ -829,14 +972,21 @@
 	}
 
 	async function handleComposerSubmit(content: string, attachments: ChatAttachment[]) {
-		if (pendingAskUser) {
-			const freeformAnswers = buildAskUserAnswersFromFreeform(content);
-			if (Object.keys(freeformAnswers).length === 0) return;
-			await resolveAskUser(freeformAnswers);
-			return;
-		}
+		try {
+			if (pendingAskUser) {
+				const freeformAnswers = buildAskUserAnswersFromFreeform(content);
+				if (Object.keys(freeformAnswers).length === 0) return;
+				await resolveAskUser(freeformAnswers);
+				return;
+			}
 
-		await streamMessage(content, false, attachments);
+			await streamMessage(content, false, attachments);
+		} catch (error) {
+			logChatUi('error', 'Composer submission failed', {
+				error: error instanceof Error ? error.message : String(error),
+				attachmentCount: attachments.length,
+			});
+		}
 	}
 
 	async function streamMessage(content: string, regenerate = false, attachments: ChatAttachment[] = []) {
@@ -853,7 +1003,7 @@
 		}
 
 		streaming = true;
-		streamError = null;
+		clearRecoverableError();
 		streamingBlocks = [];
 		currentTextTarget = '';
 		currentThinkingTarget = '';
@@ -863,7 +1013,13 @@
 		waitingForFirstToken = true;
 		streamAbortController = abortController;
 		stoppedByUser = false;
+		let streamHandshakeSucceeded = false;
 		try {
+			logChatUi('info', 'Opening stream', {
+				regenerate,
+				attachmentCount: attachments.length,
+				reasoningEffort,
+			});
 			const response = await fetch(`/chat/${conversationId}/stream`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -879,9 +1035,14 @@
 			});
 
 			if (!response.ok || !response.body) {
-				throw new Error('Failed to open stream');
+				const responseText = await response.text().catch(() => '');
+				throw new Error(
+					`Failed to open stream (status ${response.status})${responseText ? `: ${responseText}` : ''}`
+				);
 			}
 
+			streamHandshakeSucceeded = true;
+			logChatUi('info', 'Stream opened', { regenerate });
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -900,7 +1061,17 @@
 					if (!eventLine || !dataLine) continue;
 
 					const eventName = eventLine.slice(7).trim();
-					const payload = JSON.parse(dataLine.slice(6));
+					let payload: Record<string, any>;
+					try {
+						payload = JSON.parse(dataLine.slice(6)) as Record<string, any>;
+					} catch (error) {
+						logChatUi('error', 'Failed to parse SSE payload', {
+							eventName,
+							rawData: dataLine.slice(6, 300),
+							error: error instanceof Error ? error.message : String(error),
+						});
+						continue;
+					}
 
 					if (eventName === 'delta') {
 						waitingForFirstToken = false;
@@ -1126,8 +1297,19 @@
 					if (eventName === 'done') {
 						waitingForFirstToken = false;
 						if (payload.error) {
-							streamError = payload.error;
+							const message = String(payload.error);
+							setRecoverableError(
+								message,
+								{
+									kind: 'stream',
+									content,
+									regenerate: regenerate || streamHandshakeSucceeded,
+									attachments: regenerate || streamHandshakeSucceeded ? [] : attachments,
+								},
+								{ eventName: 'done', regenerate, streamHandshakeSucceeded }
+							);
 						} else if (payload.messageId) {
+							clearRecoverableError();
 							finalizeCurrentThinkingBlock();
 							finalizeCurrentTextBlock();
 							// Keep content visible until refreshAll() confirms DB message
@@ -1153,16 +1335,46 @@
 		} catch (error) {
 			if (error instanceof DOMException && error.name === 'AbortError') {
 				if (!stoppedByUser) {
-					streamError = 'Stream interrupted';
+					setRecoverableError(
+						'Stream interrupted',
+						{
+							kind: 'stream',
+							content,
+							regenerate: regenerate || streamHandshakeSucceeded,
+							attachments: regenerate || streamHandshakeSucceeded ? [] : attachments,
+						},
+						{ regenerate, streamHandshakeSucceeded, reason: 'abort' }
+					);
 				}
 			} else {
-				streamError = error instanceof Error ? error.message : 'Streaming error';
+				setRecoverableError(
+					error instanceof Error ? error.message : 'Streaming error',
+					{
+						kind: 'stream',
+						content,
+						regenerate: regenerate || streamHandshakeSucceeded,
+						attachments: regenerate || streamHandshakeSucceeded ? [] : attachments,
+					},
+					{
+						regenerate,
+						streamHandshakeSucceeded,
+						error: error instanceof Error ? error.message : String(error),
+					}
+				);
 			}
 		} finally {
-			await persistCanceledPartialIfAny().catch(() => {});
+			await persistCanceledPartialIfAny().catch((error) => {
+				logChatUi('warn', 'Failed to persist partial assistant message', {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			});
 
 			// Always reload messages so user & assistant messages show even after an error
-			await refreshAll().catch(() => {});
+			await refreshAll().catch((error) => {
+				logChatUi('warn', 'Failed to refresh chat state after stream', {
+					error: error instanceof Error ? error.message : String(error),
+				});
+			});
 			if (pendingMessageId && messages.some((message) => message.id === pendingMessageId)) {
 				streamingBlocks = [];
 				currentTextTarget = '';
@@ -1184,10 +1396,11 @@
 		try {
 			const result = await editMessage({ messageId, content });
 			if (!result || result.success !== true) {
-				streamError = result?.error ?? 'Unable to edit message';
+				setRecoverableError(result?.error ?? 'Unable to edit message', { kind: 'edit', messageId, content }, { action: 'handleEdit' });
 				return;
 			}
 
+			clearRecoverableError();
 			// Editing creates a new branch point. Clear optimistic remnants so
 			// old assistant drafts cannot be re-shown after the server truncates history.
 			pendingAssistantDrafts = [];
@@ -1202,7 +1415,11 @@
 			await refreshAll();
 			await streamMessage('regenerate', true);
 		} catch (error) {
-			streamError = error instanceof Error ? error.message : 'Unable to edit message';
+			setRecoverableError(
+				error instanceof Error ? error.message : 'Unable to edit message',
+				{ kind: 'edit', messageId, content },
+				{ action: 'handleEdit', messageId }
+			);
 		}
 	}
 
@@ -1347,7 +1564,29 @@
 			</div>
 
 			{#if streamError}
-				<p class="text-sm text-error">{streamError}</p>
+				<div class="alert alert-error py-2 text-sm">
+					<span>{streamError}</span>
+					<div class="ml-auto flex items-center gap-2">
+						{#if retryIntent}
+							<button
+								type="button"
+								class="btn btn-xs btn-outline"
+								onclick={retryLastAction}
+								disabled={retryBusy || streaming}
+							>
+								{retryBusy ? 'Retrying...' : 'Retry'}
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="btn btn-xs btn-ghost"
+							onclick={clearRecoverableError}
+							disabled={retryBusy}
+						>
+							Dismiss
+						</button>
+					</div>
+				</div>
 			{/if}
 		{/if}
 

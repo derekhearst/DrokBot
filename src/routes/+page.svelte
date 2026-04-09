@@ -3,7 +3,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { createConversation, getConversations } from '$lib/chat';
@@ -27,8 +27,17 @@
 
 	type Conversation = Awaited<ReturnType<typeof getConversations>>[number];
 	type AgentChoice = Awaited<ReturnType<typeof getAgentChoices>>[number];
+	type LiveRun = {
+		id: string;
+		conversationId: string;
+		state: 'queued' | 'running' | 'waiting_tool_approval' | 'waiting_user_input' | 'waiting_plan_decision';
+		label?: string | null;
+		lastHeartbeatAt?: string | Date | null;
+		updatedAt?: string | Date | null;
+	};
 	let recentChats = $state<Conversation[]>([]);
 	let agentChoices = $state<AgentChoice[]>([]);
+	let liveRuns = $state<Record<string, LiveRun>>({});
 
 	$effect(() => {
 		void loadRecent();
@@ -65,6 +74,49 @@
 		recentChats = await getConversations();
 		agentChoices = await getAgentChoices();
 	}
+
+	function runForConversation(conversation: Conversation): LiveRun | null {
+		return liveRuns[conversation.id] ?? conversation.activeRun ?? null;
+	}
+
+	function runLabel(run: LiveRun) {
+		if (run.label && run.label.trim().length > 0) return run.label;
+		switch (run.state) {
+			case 'queued':
+				return 'Queued';
+			case 'running':
+				return 'Running';
+			case 'waiting_tool_approval':
+				return 'Needs approval';
+			case 'waiting_user_input':
+				return 'Waiting for you';
+			case 'waiting_plan_decision':
+				return 'Plan pending';
+			default:
+				return 'Running';
+		}
+	}
+
+	onMount(() => {
+		if (!browser) return;
+		const source = new EventSource('/api/chat/monitor');
+		source.onmessage = (event) => {
+			try {
+				const runs = JSON.parse(event.data) as LiveRun[];
+				const next: Record<string, LiveRun> = {};
+				for (const run of runs) {
+					next[run.conversationId] = run;
+				}
+				liveRuns = next;
+			} catch {
+				// Ignore malformed monitor payloads.
+			}
+		};
+
+		return () => {
+			source.close();
+		};
+	});
 
 	function getGreeting() {
 		const hour = new Date().getHours();
@@ -236,13 +288,19 @@
 				<h2 class="text-xs font-semibold uppercase tracking-wide text-base-content/40">Recent chats</h2>
 				<div class="space-y-0.5">
 					{#each recentChats.slice(0, 5) as chat (chat.id)}
+						{@const run = runForConversation(chat)}
 						<a
 							href={`/chat/${chat.id}`}
 							class="flex items-baseline gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-base-200"
 						>
-							<span class="min-w-0 flex-1 truncate font-medium">{chat.title}</span>
+							<span class="min-w-0 flex-1 truncate font-medium">
+								{#if run}
+									<span class="mr-1.5 inline-flex h-2.5 w-2.5 rounded-full {run.state === 'running' || run.state === 'queued' ? 'animate-pulse bg-info' : 'bg-warning'}"></span>
+								{/if}
+								{chat.title}
+							</span>
 							<span class="shrink-0 text-[11px] text-base-content/40">
-								{new Date(chat.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+								{run ? runLabel(run) : new Date(chat.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
 							</span>
 						</a>
 					{/each}
@@ -273,13 +331,19 @@
 				<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
 				<div class="space-y-0.5">
 					{#each group.items as chat (chat.id)}
+						{@const run = runForConversation(chat)}
 						<a
 							href={`/chat/${chat.id}`}
 							class="chat-list-item block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
 						>
-							<span class="line-clamp-1 font-medium">{chat.title}</span>
+							<span class="line-clamp-1 font-medium">
+								{#if run}
+									<span class="mr-1.5 inline-flex h-2.5 w-2.5 rounded-full {run.state === 'running' || run.state === 'queued' ? 'animate-pulse bg-info' : 'bg-warning'}"></span>
+								{/if}
+								{chat.title}
+							</span>
 							<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
-								{chat.lastMessage ?? 'No messages yet'}
+								{run ? runLabel(run) : (chat.lastMessage ?? 'No messages yet')}
 							</span>
 						</a>
 					{/each}

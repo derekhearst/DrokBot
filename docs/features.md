@@ -170,7 +170,6 @@ AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 | `/agents/[id]`              | Agent detail                    |
 | `/agents/[id]/runs/[runId]` | Agent run trace                 |
 | `/automations`              | Automation schedule overview    |
-| `/review`                   | Review queue                    |
 | `/skills`                   | Skills browser (read-only)      |
 | `/skills/[id]`              | Skill detail + files            |
 | `/memory`                   | Memory explorer (read-only)     |

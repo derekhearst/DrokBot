@@ -302,14 +302,15 @@
 
 	<!-- ─── Scrollable Settings ─── -->
 	<div class="mt-2 min-h-0 flex-1 overflow-y-auto">
-	<div class="mx-auto max-w-2xl space-y-6 px-1 pb-6 sm:space-y-10 sm:px-0">
+	<div class="mx-auto max-w-6xl px-1 pb-6 sm:px-0">
 
+	<div class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
 	{#if settings}
 		<!-- ════════════════════════════════════════════════
 		     MODEL & AI
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('model')}
-		<section>
+		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>Model & AI
 			</p>
@@ -436,7 +437,7 @@
 		     CONTEXT WINDOW
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('context')}
-		<section>
+		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Context Window
 			</p>
@@ -503,7 +504,7 @@
 		     TOOL TOGGLES
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('tools')}
-		<section>
+		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Tool Availability
 			</p>
@@ -537,7 +538,7 @@
 		     NOTIFICATIONS
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('notifications')}
-		<section>
+		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent"></span>Notifications
 			</p>
@@ -570,7 +571,7 @@
 		     BUDGET
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('budget')}
-		<section>
+		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-1.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 				<span class="inline-block h-1.5 w-1.5 rounded-full bg-warning"></span>Budget
 			</p>
@@ -624,7 +625,7 @@
 	     APP & PUSH
 	     ════════════════════════════════════════════════ -->
 	{#if isVisible('app')}
-	<section>
+	<section class="mt-4 rounded-2xl border border-base-300/60 bg-base-100/60 p-4 lg:mt-0">
 		<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-info"></span>App & Push
 		</p>
@@ -671,7 +672,7 @@
 	     DEVELOPER TOOLS
 	     ════════════════════════════════════════════════ -->
 	{#if isVisible('devtools')}
-	<section>
+	<section class="mt-4 rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 		<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
 			<span class="inline-block h-1.5 w-1.5 rounded-full bg-error"></span>Developer Tools
 		</p>
@@ -713,8 +714,9 @@
 		</div>
 	</section>
 	{/if}
+	</div>
 
-	</div><!-- end max-w-2xl -->
+	</div><!-- end max-w-6xl -->
 	</div><!-- end scroll -->
 </section>
 

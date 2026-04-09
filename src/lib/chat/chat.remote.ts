@@ -1,8 +1,8 @@
 import { command, query } from '$app/server'
-import { and, asc, desc, eq, gt, ne, or } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, isNull, ne, or } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '$lib/db.server'
-import { conversations, messages } from '$lib/chat/chat.schema'
+import { chatRuns, conversations, messages } from '$lib/chat/chat.schema'
 import { getOrCreateSettings } from '$lib/settings/settings.server'
 import { requireAuthenticatedRequestUser } from '$lib/auth/auth.server'
 
@@ -39,6 +39,13 @@ const savePartialAssistantSchema = z.object({
 
 export const getConversations = query(async () => {
 	const user = requireAuthenticatedRequestUser()
+	const activeStates = new Set([
+		'queued',
+		'running',
+		'waiting_tool_approval',
+		'waiting_user_input',
+		'waiting_plan_decision',
+	])
 	const rows = await db
 		.select()
 		.from(conversations)
@@ -51,11 +58,51 @@ export const getConversations = query(async () => {
 		? await db.select().from(messages).where(eq(messages.role, 'assistant')).orderBy(desc(messages.createdAt))
 		: []
 
+	const conversationIdSet = new Set(conversationIds)
+
+	const activeRuns = conversationIds.length
+		? await db
+				.select({
+					id: chatRuns.id,
+					conversationId: chatRuns.conversationId,
+					state: chatRuns.state,
+					label: chatRuns.label,
+					startedAt: chatRuns.startedAt,
+					lastHeartbeatAt: chatRuns.lastHeartbeatAt,
+					updatedAt: chatRuns.updatedAt,
+					error: chatRuns.error,
+				})
+				.from(chatRuns)
+				.where(and(eq(chatRuns.userId, user.id), isNull(chatRuns.finishedAt)))
+				.orderBy(desc(chatRuns.updatedAt))
+		: []
+
+	const activeRunByConversation = new Map<string, (typeof activeRuns)[number]>()
+	for (const run of activeRuns) {
+		if (!conversationIdSet.has(run.conversationId)) continue
+		if (!activeStates.has(run.state)) continue
+		if (!activeRunByConversation.has(run.conversationId)) {
+			activeRunByConversation.set(run.conversationId, run)
+		}
+	}
+
 	return rows.map((conversation) => {
 		const last = lastMessages.find((message) => message.conversationId === conversation.id)
+		const activeRun = activeRunByConversation.get(conversation.id)
 		return {
 			...conversation,
 			lastMessage: last?.content ?? null,
+			activeRun: activeRun
+				? {
+						id: activeRun.id,
+						state: activeRun.state,
+						label: activeRun.label,
+						startedAt: activeRun.startedAt,
+						lastHeartbeatAt: activeRun.lastHeartbeatAt,
+						updatedAt: activeRun.updatedAt,
+						error: activeRun.error,
+					}
+				: null,
 		}
 	})
 })

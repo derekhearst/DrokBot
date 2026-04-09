@@ -10,7 +10,6 @@
 	import RecentChats from '$lib/chat/RecentChats.svelte';
 	import DreamCycles from '$lib/memory/DreamCycles.svelte';
 	import SidePanel from '$lib/ui/SidePanel.svelte';
-	import PromptPreviewPanel from '$lib/settings/PromptPreviewPanel.svelte';
 	import { dreamPanel } from '$lib/state.svelte';
 	import SkillStats from '$lib/skills/SkillStats.svelte';
 	import { skillsPanel } from '$lib/state.svelte';
@@ -26,7 +25,7 @@
 	const isSkillsRoute = $derived(page.url.pathname.startsWith('/skills'));
 	const isChatOrHome = $derived(isChatRoute || page.url.pathname === '/');
 	const showRecentChats = $derived(isChatRoute || page.url.pathname === '/');
-	const showAside = $derived(showRecentChats || isMemoryRoute || isSettingsRoute || isSkillsRoute);
+	const showAside = $derived(showRecentChats || isMemoryRoute || isSkillsRoute);
 
 	if (browser) {
 		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -158,10 +157,6 @@
 				{:else if isSkillsRoute}
 					<SidePanel bind:open={skillsPanel.open}>
 						<SkillStats />
-					</SidePanel>
-				{:else if isSettingsRoute}
-					<SidePanel>
-						<PromptPreviewPanel />
 					</SidePanel>
 				{/if}
 			</div>

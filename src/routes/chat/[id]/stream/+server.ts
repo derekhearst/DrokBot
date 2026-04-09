@@ -1,7 +1,7 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
 import { and, asc, desc, eq, gt } from 'drizzle-orm'
 import { db } from '$lib/db.server'
-import { conversations, messages } from '$lib/chat/chat.schema'
+import { chatRuns, conversations, messages } from '$lib/chat/chat.schema'
 import { streamChat, type LlmMessage } from '$lib/openrouter.server'
 import { extractAndPersist } from '$lib/memory/memory'
 import { shouldFetchMemory } from '$lib/memory/memory'
@@ -43,6 +43,8 @@ type StreamPayload = {
 	regenerate?: boolean
 	attachments?: Array<{ id: string; filename: string; mimeType: string; size: number; url: string }>
 }
+
+type ChatRunState = (typeof chatRuns.$inferInsert)['state']
 
 type LoopMessage = LlmMessage & {
 	toolCalls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }>
@@ -223,7 +225,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const orchestratorPrompt = await buildOrchestratorPrompt()
 		systemSections.push(orchestratorPrompt)
 	} else {
-		// Agent conversation — load agent's own system prompt
+		// Agent conversation ΓÇö load agent's own system prompt
 		const { agents: agentsTable } = await import('$lib/agents/agents.schema')
 		const [agent] = await db.select().from(agentsTable).where(eq(agentsTable.id, conversation.agentId!)).limit(1)
 		if (agent) {
@@ -236,7 +238,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (currentSettings.systemPrompt?.trim()) {
-		// systemPrompt deprecated – memory layers will replace this
+		// systemPrompt deprecated ΓÇô memory layers will replace this
 	}
 	systemSections.push(
 		[
@@ -287,17 +289,84 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		.filter((tool) =>
 			scopedAgentTools ? scopedAgentTools.includes(tool.function.name) : !DREAMING_ONLY_TOOLS.has(tool.function.name),
 		)
-	// No hard limit — loop exits when the model stops calling tools
+	// No hard limit ΓÇö loop exits when the model stops calling tools
 	const MAX_TOOL_ROUNDS = 50
 
 	const toolApprovalMode = toolConfig?.approvalMode ?? 'auto'
+	const [run] = await db
+		.insert(chatRuns)
+		.values({
+			conversationId: body.conversationId,
+			userId: user.id,
+			agentId: conversation.agentId,
+			state: 'running',
+			source: 'chat_stream',
+			label: body.regenerate ? 'Regenerating response' : 'Generating response',
+			startedAt: new Date(),
+			lastHeartbeatAt: new Date(),
+		})
+		.returning({ id: chatRuns.id })
 
 	const readable = new ReadableStream<Uint8Array>({
 		async start(controller) {
+			let clientConnected = true
+			let lastHeartbeatWriteAt = 0
+
+			const safeController = {
+				enqueue(chunk: Uint8Array) {
+					if (!clientConnected) return
+					try {
+						controller.enqueue(chunk)
+					} catch {
+						clientConnected = false
+					}
+				},
+			} as ReadableStreamDefaultController<Uint8Array>
+
+			const emit = (eventName: string, payload: unknown) => {
+				safeController.enqueue(sse(eventName, payload))
+			}
+
+			const updateRun = async (patch: {
+				state?: ChatRunState
+				label?: string | null
+				lastDelta?: string | null
+				error?: string | null
+				heartbeat?: boolean
+				finished?: boolean
+			}) => {
+				const now = Date.now()
+				if (
+					patch.heartbeat &&
+					!patch.state &&
+					patch.label === undefined &&
+					patch.lastDelta === undefined &&
+					patch.error === undefined &&
+					now - lastHeartbeatWriteAt < 1000
+				) {
+					return
+				}
+
+				const values: Partial<typeof chatRuns.$inferInsert> = {
+					updatedAt: new Date(now),
+				}
+				if (patch.state) values.state = patch.state
+				if (patch.label !== undefined) values.label = patch.label
+				if (patch.lastDelta !== undefined) values.lastDelta = patch.lastDelta
+				if (patch.error !== undefined) values.error = patch.error
+				if (patch.heartbeat || patch.state === 'running') values.lastHeartbeatAt = new Date(now)
+				if (patch.finished) values.finishedAt = new Date(now)
+
+				await db.update(chatRuns).set(values).where(eq(chatRuns.id, run.id))
+				if (patch.heartbeat || patch.state === 'running') {
+					lastHeartbeatWriteAt = now
+				}
+			}
+
 			try {
 				// Notify client if compaction occurred
 				if (didCompact) {
-					controller.enqueue(sse('compaction', { tokensBefore: compactionCheck.tokenEstimate }))
+					emit('compaction', { tokensBefore: compactionCheck.tokenEstimate })
 				}
 
 				let currentMessages: LoopMessage[] = [...trimmedMessages]
@@ -343,13 +412,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						const reasoningDetailDelta = delta?.reasoningDetails
 						if (typeof reasoningDelta === 'string' && reasoningDelta.length > 0) {
 							assistantReasoning += reasoningDelta
-							controller.enqueue(sse('reasoning', { content: reasoningDelta }))
+							emit('reasoning', { content: reasoningDelta })
 						} else if (reasoningDetailDelta?.length) {
 							assistantReasoningDetails.push(...reasoningDetailDelta)
 							const fragment = extractReasoningFragment(reasoningDetailDelta)
 							if (fragment) {
 								assistantReasoning += fragment
-								controller.enqueue(sse('reasoning', { content: fragment }))
+								emit('reasoning', { content: fragment })
 							}
 						}
 						const content = delta?.content
@@ -358,7 +427,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								firstTokenAt = Date.now()
 							}
 							assistantContent += content
-							controller.enqueue(sse('delta', { content }))
+							emit('delta', { content })
+							await updateRun({
+								state: 'running',
+								label: 'Generating response',
+								lastDelta: assistantContent.slice(-500),
+								heartbeat: true,
+							})
 						}
 
 						// Accumulate streamed tool calls
@@ -382,6 +457,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								reasoningTokens = chunk.usage.completionTokensDetails?.reasoningTokens ?? reasoningTokens
 							}
 						}
+
+						await updateRun({ state: 'running', heartbeat: true })
 					}
 
 					// Check for finish_reason tool_calls or pending tool calls
@@ -411,33 +488,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					}
 
 					if (validToolCalls.length === 0) {
-						// No tool calls — we're done
+						// No tool calls ΓÇö we're done
 						break
 					}
 
 					if (toolApprovalMode === 'plan') {
 						const planToken = crypto.randomUUID()
-						controller.enqueue(
-							sse('plan_pending', {
-								token: planToken,
-								round,
-								tools: plannedToolCalls.map((tc) => ({
-									id: tc.id,
-									name: tc.name,
-									arguments: tc.arguments,
-									preview: tc.parsedArgs,
-								})),
-							}),
-						)
+						await updateRun({ state: 'waiting_plan_decision', label: 'Waiting for plan decision' })
+						emit('plan_pending', {
+							token: planToken,
+							round,
+							tools: plannedToolCalls.map((tc) => ({
+								id: tc.id,
+								name: tc.name,
+								arguments: tc.arguments,
+								preview: tc.parsedArgs,
+							})),
+						})
 
 						const decision = await requestPlanDecision(planToken)
 						const normalizedDecision = decision ?? 'deny'
-						controller.enqueue(
-							sse('plan_decision', {
-								token: planToken,
-								decision: normalizedDecision,
-							}),
-						)
+						await updateRun({ state: 'running', label: 'Resuming execution', heartbeat: true })
+						emit('plan_decision', {
+							token: planToken,
+							decision: normalizedDecision,
+						})
 
 						if (normalizedDecision === 'continue') {
 							currentMessages.push({
@@ -511,22 +586,24 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						// If approval mode is 'confirm', pause and wait for user decision
 						if (toolApprovalMode === 'confirm') {
 							const approvalToken = crypto.randomUUID()
-							controller.enqueue(
-								sse('tool_pending', {
-									token: approvalToken,
+							await updateRun({ state: 'waiting_tool_approval', label: `Waiting for approval: ${tc.name}` })
+							emit('tool_pending', {
+								token: approvalToken,
+								id: tc.id,
+								name: tc.name,
+								arguments: tc.arguments,
+							})
+							const approved = await requestApproval(approvalToken)
+							await updateRun({
+								state: 'running',
+								label: approved ? `Executing ${tc.name}` : `Denied ${tc.name}`,
+								heartbeat: true,
+							})
+							if (!approved) {
+								emit('tool_denied', {
 									id: tc.id,
 									name: tc.name,
-									arguments: tc.arguments,
-								}),
-							)
-							const approved = await requestApproval(approvalToken)
-							if (!approved) {
-								controller.enqueue(
-									sse('tool_denied', {
-										id: tc.id,
-										name: tc.name,
-									}),
-								)
+								})
 								allToolCalls.push({
 									name: tc.name,
 									arguments: parsedArgs,
@@ -540,13 +617,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 						if (disabledTools.has(tc.name)) {
 							const deniedMessage = `Tool '${tc.name}' is disabled in settings.`
-							controller.enqueue(
-								sse('tool_denied', {
-									id: tc.id,
-									name: tc.name,
-									reason: deniedMessage,
-								}),
-							)
+							emit('tool_denied', {
+								id: tc.id,
+								name: tc.name,
+								reason: deniedMessage,
+							})
 							allToolCalls.push({
 								name: tc.name,
 								arguments: parsedArgs,
@@ -586,14 +661,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								input = toolSchemas.ask_user.parse(parsedArgs)
 							} catch {
 								const errorMessage = 'ask_user received invalid arguments.'
-								controller.enqueue(
-									sse('tool_result', {
-										name: tc.name,
-										success: false,
-										executionMs: 0,
-										result: errorMessage,
-									}),
-								)
+								emit('tool_result', {
+									name: tc.name,
+									success: false,
+									executionMs: 0,
+									result: errorMessage,
+								})
 								allToolCalls.push({
 									name: tc.name,
 									arguments: parsedArgs,
@@ -605,16 +678,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							}
 
 							const questionToken = crypto.randomUUID()
-							controller.enqueue(
-								sse('ask_user', {
-									token: questionToken,
-									id: tc.id,
-									name: tc.name,
-									questions: input.questions,
-								}),
-							)
+							await updateRun({ state: 'waiting_user_input', label: 'Waiting for user input' })
+							emit('ask_user', {
+								token: questionToken,
+								id: tc.id,
+								name: tc.name,
+								questions: input.questions,
+							})
 
 							const answers = await requestUserQuestions(questionToken)
+							await updateRun({ state: 'running', label: 'User input received', heartbeat: true })
 							const questionResult = {
 								questions: input.questions,
 								answers,
@@ -622,15 +695,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							}
 							const resultStr = trimToolResult(tc.name, JSON.stringify(questionResult))
 
-							controller.enqueue(
-								sse('tool_result', {
-									id: tc.id,
-									name: tc.name,
-									success: answers !== null,
-									executionMs: 0,
-									result: resultStr,
-								}),
-							)
+							emit('tool_result', {
+								id: tc.id,
+								name: tc.name,
+								success: answers !== null,
+								executionMs: 0,
+								result: resultStr,
+							})
 
 							toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
 							allToolCalls.push({
@@ -650,13 +721,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							continue
 						}
 
-						controller.enqueue(
-							sse('tool_call', {
-								id: tc.id,
-								name: tc.name,
-								arguments: tc.arguments,
-							}),
-						)
+						await updateRun({ state: 'running', label: `Executing ${tc.name}`, heartbeat: true })
+						emit('tool_call', {
+							id: tc.id,
+							name: tc.name,
+							arguments: tc.arguments,
+						})
 
 						// Intercept run_subagent with agentId for inline sub-agent streaming
 						if (tc.name === 'run_subagent' && isOrchestrator) {
@@ -673,7 +743,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 										},
 										user.id,
 										body.conversationId,
-										controller,
+										safeController,
 										disabledTools,
 									)
 									const resultStr = trimToolResult(
@@ -685,15 +755,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 										}),
 									)
 									toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
-									controller.enqueue(
-										sse('tool_result', {
-											id: tc.id,
-											name: tc.name,
-											success: true,
-											executionMs: 0,
-											result: resultStr,
-										}),
-									)
+									emit('tool_result', {
+										id: tc.id,
+										name: tc.name,
+										success: true,
+										executionMs: 0,
+										result: resultStr,
+									})
 									allToolCalls.push({
 										name: tc.name,
 										arguments: parsedArgs,
@@ -711,15 +779,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 								} catch (error) {
 									const errorStr = error instanceof Error ? error.message : 'Sub-agent execution failed'
 									toolResults.push({ call_id: tc.id, name: tc.name, result: `Error: ${errorStr}` })
-									controller.enqueue(
-										sse('tool_result', {
-											id: tc.id,
-											name: tc.name,
-											success: false,
-											executionMs: 0,
-											result: errorStr,
-										}),
-									)
+									emit('tool_result', {
+										id: tc.id,
+										name: tc.name,
+										success: false,
+										executionMs: 0,
+										result: errorStr,
+									})
 									allToolCalls.push({
 										name: tc.name,
 										arguments: parsedArgs,
@@ -757,25 +823,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						if (tc.name === 'artifact_create' && toolResult.success && toolResult.result) {
 							const artifactResult = toolResult.result as { artifactId?: string; title?: string; type?: string }
 							if (artifactResult.artifactId) {
-								controller.enqueue(
-									sse('artifact_created', {
-										artifactId: artifactResult.artifactId,
-										title: artifactResult.title,
-										type: artifactResult.type,
-									}),
-								)
+								emit('artifact_created', {
+									artifactId: artifactResult.artifactId,
+									title: artifactResult.title,
+									type: artifactResult.type,
+								})
 							}
 						}
 
-						controller.enqueue(
-							sse('tool_result', {
-								id: tc.id,
-								name: tc.name,
-								success: toolResult.success,
-								executionMs: toolResult.executionMs,
-								result: resultStr,
-							}),
-						)
+						emit('tool_result', {
+							id: tc.id,
+							name: tc.name,
+							success: toolResult.success,
+							executionMs: toolResult.executionMs,
+							result: resultStr,
+						})
 
 						allToolCalls.push({
 							name: tc.name,
@@ -891,7 +953,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					])
 						.then((title) => db.update(conversations).set({ title }).where(eq(conversations.id, body.conversationId)))
 						.catch(() => {
-							// Non-critical — title stays as default
+							// Non-critical ΓÇö title stays as default
 						})
 				}
 
@@ -904,28 +966,43 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					// Ignore extraction failures to avoid impacting chat streaming.
 				})
 
-				controller.enqueue(
-					sse('metrics', {
-						model: routedModel,
-						tokensIn: promptTokens,
-						tokensOut: completionTokens,
-						reasoningTokens,
-						ttftMs,
-						totalMs,
-						tokensPerSec,
-						cost: parseFloat(messageCost),
-						modelSelection,
-					}),
-				)
-				controller.enqueue(sse('done', { messageId: assistantMessage.id }))
-				controller.close()
+				await updateRun({
+					state: 'completed',
+					label: 'Completed',
+					lastDelta: (allTextContent || assistantContent || '').slice(-500),
+					heartbeat: true,
+					finished: true,
+				})
+
+				emit('metrics', {
+					model: routedModel,
+					tokensIn: promptTokens,
+					tokensOut: completionTokens,
+					reasoningTokens,
+					ttftMs,
+					totalMs,
+					tokensPerSec,
+					cost: parseFloat(messageCost),
+					modelSelection,
+				})
+				emit('done', { messageId: assistantMessage.id })
+				if (clientConnected) {
+					controller.close()
+				}
 			} catch (error) {
-				controller.enqueue(
-					sse('done', {
-						error: error instanceof Error ? error.message : 'Failed to stream response',
-					}),
-				)
-				controller.close()
+				const errorMessage = error instanceof Error ? error.message : 'Failed to stream response'
+				await updateRun({
+					state: 'failed',
+					label: 'Failed',
+					error: errorMessage,
+					finished: true,
+				})
+				emit('done', {
+					error: errorMessage,
+				})
+				if (clientConnected) {
+					controller.close()
+				}
 			}
 		},
 	})

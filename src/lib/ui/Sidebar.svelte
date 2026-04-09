@@ -57,17 +57,6 @@
 				</svg>
 				Agents
 			</a>
-			<a href="/review"
-				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
-				class:bg-base-200={isActive('/review')} class:font-medium={isActive('/review')} class:text-primary={isActive('/review')}
-				onclick={onNavigate}>
-				<!-- eye -->
-				<svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
-					<circle cx="12" cy="12" r="3"/>
-				</svg>
-				Review
-			</a>
 			<a href="/artifacts"
 				class="nav-link flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-base-200"
 				class:bg-base-200={isActive('/artifacts')} class:font-medium={isActive('/artifacts')} class:text-primary={isActive('/artifacts')}

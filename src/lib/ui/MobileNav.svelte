@@ -13,7 +13,6 @@
 	const moreItems = [
 		{ href: '/memory', label: 'Memory' },
 		{ href: '/activity', label: 'Activity' },
-		{ href: '/review', label: 'Review' },
 		{ href: '/artifacts', label: 'Artifacts' },
 		{ href: '/skills', label: 'Skills' },
 		{ href: '/automations', label: 'Automations' },
@@ -49,7 +48,7 @@
 
 <nav class="z-20 mx-auto flex w-full max-w-400 justify-center px-3 py-2 tablet:hidden safe-bottom {slideOff ? 'mobile-nav-slide-off' : ''}">
 	<div class="flex w-full items-center justify-around rounded-2xl border border-base-300/50 bg-base-100/80 px-1 py-1 shadow-lg shadow-black/20 backdrop-blur-xl">
-		{#each navItems as item}
+		{#each navItems as item (item.href)}
 			<a
 				href={item.href}
 				class="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] transition-colors {isActive(item.href) ? 'font-semibold text-primary' : 'text-base-content/50'}"
@@ -104,7 +103,6 @@
 		{#each [
 			{ href: '/memory', label: 'Memory', icon: 'db' },
 			{ href: '/activity', label: 'Activity', icon: 'activity' },
-			{ href: '/review', label: 'Review', icon: 'eye' },
 			{ href: '/artifacts', label: 'Artifacts', icon: 'layers' },
 			{ href: '/skills', label: 'Skills', icon: 'cap' },
 			{ href: '/automations', label: 'Automations', icon: 'cycle' },
@@ -126,9 +124,6 @@
 						<path d="M3 11v6c0 1.66 4.03 3 9 3s9-1.34 9-3v-6"/>
 					{:else if item.icon === 'activity'}
 						<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-					{:else if item.icon === 'eye'}
-						<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
-						<circle cx="12" cy="12" r="3"/>
 					{:else if item.icon === 'layers'}
 						<polygon points="12 2 2 7 12 12 22 7 12 2"/>
 						<polyline points="2 17 12 22 22 17"/>

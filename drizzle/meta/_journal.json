@@ -57,6 +57,13 @@
       "when": 1775697334597,
       "tag": "0007_late_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775710053310,
+      "tag": "0008_windy_ink",
+      "breakpoints": true
     }
   ]
 }

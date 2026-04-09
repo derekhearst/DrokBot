@@ -1,13 +1,24 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { getConversations } from '$lib/chat';
 	import ContentPanel from '$lib/ui/ContentPanel.svelte';
 	import { getAvailableModels } from '$lib/models';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 
 	type Conversation = Awaited<ReturnType<typeof getConversations>>[number];
 	type GroupMode = 'date' | 'category';
+	type LiveRun = {
+		id: string;
+		conversationId: string;
+		state: 'queued' | 'running' | 'waiting_tool_approval' | 'waiting_user_input' | 'waiting_plan_decision';
+		label?: string | null;
+		lastHeartbeatAt?: string | Date | null;
+		updatedAt?: string | Date | null;
+	};
 
 	let conversations = $state<Conversation[]>([]);
+	let liveRuns = $state<Record<string, LiveRun>>({});
 	let groupMode = $state<GroupMode>('date');
 	let search = $state('');
 	let availableModels = $derived(await getAvailableModels());
@@ -19,6 +30,50 @@
 	async function loadConversations() {
 		conversations = await getConversations();
 	}
+
+	function runFor(conversation: Conversation): LiveRun | null {
+		return liveRuns[conversation.id] ?? conversation.activeRun ?? null;
+	}
+
+	function runLabel(run: LiveRun) {
+		if (run.label && run.label.trim().length > 0) return run.label;
+		switch (run.state) {
+			case 'queued':
+				return 'Queued';
+			case 'running':
+				return 'Running';
+			case 'waiting_tool_approval':
+				return 'Needs approval';
+			case 'waiting_user_input':
+				return 'Waiting for you';
+			case 'waiting_plan_decision':
+				return 'Plan pending';
+			default:
+				return 'Running';
+		}
+	}
+
+	onMount(() => {
+		if (!browser) return;
+
+		const source = new EventSource('/api/chat/monitor');
+		source.onmessage = (event) => {
+			try {
+				const runs = JSON.parse(event.data) as LiveRun[];
+				const next: Record<string, LiveRun> = {};
+				for (const run of runs) {
+					next[run.conversationId] = run;
+				}
+				liveRuns = next;
+			} catch {
+				// Ignore malformed monitor payloads.
+			}
+		};
+
+		return () => {
+			source.close();
+		};
+	});
 
 	function relativeTime(date: Date | string) {
 		const diff = Date.now() - new Date(date).getTime();
@@ -209,13 +264,26 @@
 					<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-base-content/50">{group.label}</p>
 					<div class="space-y-1">
 						{#each group.items as conversation (conversation.id)}
+							{@const run = runFor(conversation)}
 							<a
 								href={`/chat/${conversation.id}`}
 								class="block rounded-xl px-2.5 py-2 text-sm transition-colors hover:bg-base-200"
 							>
-								<span class="line-clamp-1 font-medium">{conversation.title}</span>
+								<span class="flex items-center gap-2">
+									{#if run}
+										<span
+											class="inline-flex h-2.5 w-2.5 shrink-0 rounded-full {run.state === 'running' || run.state === 'queued' ? 'animate-pulse bg-info' : 'bg-warning'}"
+											aria-label={runLabel(run)}
+										></span>
+									{/if}
+									<span class="line-clamp-1 font-medium">{conversation.title}</span>
+								</span>
 								<span class="mt-0.5 line-clamp-1 text-xs text-base-content/50">
-									{conversation.lastMessage ?? 'No messages yet'}
+									{#if run}
+										{runLabel(run)}
+									{:else}
+										{conversation.lastMessage ?? 'No messages yet'}
+									{/if}
 								</span>
 							</a>
 						{/each}
