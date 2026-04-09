@@ -1852,13 +1852,6 @@ type PendingApproval = {
 	timer: ReturnType<typeof setTimeout>
 }
 
-export type PlanDecision = 'approve' | 'deny' | 'continue'
-
-type PendingPlanDecision = {
-	resolve: (decision: PlanDecision | null) => void
-	timer: ReturnType<typeof setTimeout>
-}
-
 export type AskUserQuestion = z.infer<typeof toolSchemas.ask_user>['questions'][number]
 export type AskUserAnswers = Record<string, string>
 
@@ -1869,7 +1862,6 @@ type PendingQuestion = {
 
 const pendingApprovals = new Map<string, PendingApproval>()
 const pendingQuestions = new Map<string, PendingQuestion>()
-const pendingPlanDecisions = new Map<string, PendingPlanDecision>()
 
 export function requestApproval(token: string): Promise<boolean> {
 	return new Promise((resolve) => {
@@ -1912,27 +1904,5 @@ export function resolveUserQuestions(token: string, answers: AskUserAnswers): bo
 	clearTimeout(entry.timer)
 	pendingQuestions.delete(token)
 	entry.resolve(answers)
-	return true
-}
-
-export function requestPlanDecision(token: string): Promise<PlanDecision | null> {
-	return new Promise((resolve) => {
-		const timer = setTimeout(() => {
-			if (pendingPlanDecisions.has(token)) {
-				pendingPlanDecisions.delete(token)
-				resolve(null)
-			}
-		}, APPROVAL_TIMEOUT_MS)
-
-		pendingPlanDecisions.set(token, { resolve, timer })
-	})
-}
-
-export function resolvePlanDecision(token: string, decision: PlanDecision): boolean {
-	const entry = pendingPlanDecisions.get(token)
-	if (!entry) return false
-	clearTimeout(entry.timer)
-	pendingPlanDecisions.delete(token)
-	entry.resolve(decision)
 	return true
 }

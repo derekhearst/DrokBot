@@ -32,12 +32,14 @@ AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 - Freeform bypass: typing in the composer resolves pending ask_user prompts directly
 - Auto-scroll keeps following live output during both text streaming and tool call rendering
 - User-canceled streams persist partial output so streamed content is not lost mid-response
+- Plan-card gating removed; execution now relies on direct tool calls with per-tool approval checks
 
 ### 2. Autonomous Agents
 
 - Named agents with custom roles, system prompts, and model assignments
 - Agent detail page supports editing each agent's model assignment and system prompt
 - LLM-driven task execution with full tool access (search, code, files, browser)
+- Agents cannot ask users directly; user question handoff must route through orchestrator
 - Agent lifecycle management (active, paused, idle)
 - Parent-child delegation for multi-step work
 - Per-run metrics: token usage, cost, execution logs
@@ -120,8 +122,7 @@ AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 - Theme (AgentStudio-night)
 - Notification preferences
 - Automation and tool approval configuration (plus memory consolidation controls via Dreaming Agent tools)
-- Tool approval mode configuration: auto, confirm, plan-first
-- Tool availability toggles by capability group (sandbox, artifacts, skills, agents, media)
+- Per-tool approval checkboxes (configure exactly which tools require approval)
 - Budget configuration (daily and monthly limits)
 - Context window configuration (reserved response, auto-compact threshold, compaction model)
 - Push subscription management
@@ -168,25 +169,25 @@ AgentStudio is a SvelteKit PWA that provides a personal, self-hosted AI agent yo
 
 ## Route Map
 
-| Route                       | Purpose                         |
-| --------------------------- | ------------------------------- |
-| `/`                         | Home / chat launcher            |
-| `/login`                    | Authentication                  |
-| `/users`                    | Admin user management           |
-| `/chat`                     | Conversation list               |
-| `/chat/[id]`                | Conversation detail + streaming |
-| `/agents`                   | Agent browser (read-only)       |
-| `/agents/[id]`              | Agent detail                    |
-| `/agents/[id]/runs/[runId]` | Agent run trace                 |
+| Route                       | Purpose                            |
+| --------------------------- | ---------------------------------- |
+| `/`                         | Home / chat launcher               |
+| `/login`                    | Authentication                     |
+| `/users`                    | Admin user management              |
+| `/chat`                     | Conversation list                  |
+| `/chat/[id]`                | Conversation detail + streaming    |
+| `/agents`                   | Agent browser (read-only)          |
+| `/agents/[id]`              | Agent detail                       |
+| `/agents/[id]/runs/[runId]` | Agent run trace                    |
 | `/automations`              | Automation board + creation studio |
-| `/skills`                   | Skills browser (read-only)      |
-| `/skills/[id]`              | Skill detail + files            |
-| `/memory`                   | Memory explorer (read-only)     |
-| `/memory/[id]`              | Memory detail + relation graph  |
-| `/artifacts`                | Artifact gallery (delete only)  |
-| `/cost`                     | Cost tracking + budgets         |
-| `/activity`                 | Activity event feed             |
-| `/settings`                 | Configuration + tool toggles    |
+| `/skills`                   | Skills browser (read-only)         |
+| `/skills/[id]`              | Skill detail + files               |
+| `/memory`                   | Memory explorer (read-only)        |
+| `/memory/[id]`              | Memory detail + relation graph     |
+| `/artifacts`                | Artifact gallery (delete only)     |
+| `/cost`                     | Cost tracking + budgets            |
+| `/activity`                 | Activity event feed                |
+| `/settings`                 | Configuration + tool toggles       |
 
 ## Responsive Breakpoint Contract
 

@@ -13,7 +13,7 @@
 		unsubscribePush
 	} from '$lib/notifications';
 	import { getSettings, resetAppSettings, updateAppSettings } from '$lib/settings';
-	import { capabilityGroups } from '$lib/tools/tools';
+	import { BUILTIN_TOOLS, capabilityGroups } from '$lib/tools/tools';
 	import ModelSelector from '$lib/models/ModelSelector.svelte';
 	import ContentPanel from '$lib/ui/ContentPanel.svelte';
 
@@ -242,24 +242,24 @@
 		};
 	}
 
-	function isToolDisabled(toolName: string): boolean {
-		return settings?.toolConfig?.disabledTools?.includes(toolName) ?? false;
+	const toolsByGroup = Object.entries(capabilityGroups).map(([groupKey, group]) => ({
+		groupKey,
+		group,
+		tools: BUILTIN_TOOLS.filter((tool) => tool.group === groupKey),
+	}));
+
+	function isToolApprovalRequired(toolName: string): boolean {
+		const requiredTools = settings?.toolConfig?.approvalRequiredTools ?? [];
+		return requiredTools.includes('*') || requiredTools.includes(toolName);
 	}
 
-	function isGroupDisabled(groupTools: readonly string[]): boolean {
-		return groupTools.every((t) => isToolDisabled(t));
-	}
-
-	function toggleGroup(groupTools: readonly string[], disabled: boolean) {
+	function toggleToolApproval(toolName: string, required: boolean) {
 		if (!settings) return;
-		const current = new Set(settings.toolConfig?.disabledTools ?? []);
-		for (const tool of groupTools) {
-			if (disabled) current.add(tool);
-			else current.delete(tool);
-		}
+		const base = (settings.toolConfig?.approvalRequiredTools ?? []).filter((name) => name !== '*');
+		const next = required ? [...new Set([...base, toolName])] : base.filter((name) => name !== toolName);
 		settings = {
 			...settings,
-			toolConfig: { ...settings.toolConfig, disabledTools: [...current] },
+			toolConfig: { ...settings.toolConfig, approvalRequiredTools: next },
 		};
 	}
 </script>
@@ -332,7 +332,7 @@
 						/>
 					</div>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Transcription Model -->
 				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
@@ -352,32 +352,7 @@
 						/>
 					</div>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
-
-				<!-- Tool Approval Mode -->
-				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
-					<div>
-						<p class="text-sm font-medium">Tool Approval</p>
-						<p class="mt-0.5 text-xs text-base-content/40">Require permission before the agent runs tools</p>
-					</div>
-					<select
-						class="select select-bordered select-sm w-full sm:w-40"
-						value={settings.toolConfig?.approvalMode ?? 'auto'}
-						onchange={(e) => {
-							if (!settings) return;
-							const mode = (e.currentTarget as HTMLSelectElement).value as 'auto' | 'confirm' | 'plan';
-							settings = {
-								...settings,
-								toolConfig: { ...settings.toolConfig, approvalMode: mode },
-							};
-						}}
-					>
-						<option value="auto">Auto-approve</option>
-						<option value="confirm">Ask every time</option>
-						<option value="plan">Plan first</option>
-					</select>
-				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Dream Auto Run -->
 				<div class="flex items-center justify-between gap-4 py-3.5">
@@ -392,7 +367,7 @@
 						onchange={(e) => updateDreamAutoRun((e.currentTarget as HTMLInputElement).checked)}
 					/>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Dream Frequency -->
 				<div class="flex items-center justify-between gap-4 py-3.5">
@@ -411,7 +386,7 @@
 						<span class="text-xs text-base-content/30">hrs</span>
 					</div>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Dream Aggressiveness -->
 				<div class="py-3.5">
@@ -458,7 +433,7 @@
 					/>
 					<p class="mt-1.5 text-xs text-base-content/35">Size of the striped reserved segment in the context bar</p>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Auto-Compact Threshold -->
 				<div class="py-3.5">
@@ -476,7 +451,7 @@
 					/>
 					<p class="mt-1.5 text-xs text-base-content/35">Auto-compaction triggers when a model switch would exceed this</p>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 
 				<!-- Compaction Model -->
 				<div class="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-3.5">
@@ -501,33 +476,39 @@
 		{/if}
 
 		<!-- ════════════════════════════════════════════════
-		     TOOL TOGGLES
+		     TOOL APPROVAL
 		     ════════════════════════════════════════════════ -->
 		{#if isVisible('tools')}
 		<section class="rounded-2xl border border-base-300/60 bg-base-100/60 p-4">
 			<p class="mb-3 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-widest text-base-content/40">
-				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Tool Availability
+				<span class="inline-block h-1.5 w-1.5 rounded-full bg-secondary"></span>Tool Approval
 			</p>
 			<div class="rounded-xl bg-base-200/40 px-3 sm:px-4">
-				{#each Object.entries(capabilityGroups) as [key, group], i (key)}
+				{#each toolsByGroup as groupEntry, i (groupEntry.groupKey)}
 					{#if i > 0}
-						<div class="border-t border-base-content/[.06]"></div>
+						<div class="border-t border-base-content/6"></div>
 					{/if}
-					<div class="flex items-center justify-between gap-4 py-3 sm:py-3.5">
+					<div class="py-3 sm:py-3.5">
 						<div>
-							<p class="text-sm font-medium">{group.label}</p>
-							<p class="mt-0.5 text-xs text-base-content/40">{group.description}</p>
+							<p class="text-sm font-medium">{groupEntry.group.label}</p>
+							<p class="mt-0.5 text-xs text-base-content/40">{groupEntry.group.description}</p>
 						</div>
-						{#if group.alwaysOn}
-							<span class="badge badge-outline badge-sm">always on</span>
-						{:else}
-							<input
-								type="checkbox"
-								class="toggle toggle-secondary toggle-sm"
-								checked={!isGroupDisabled(group.tools)}
-								onchange={(e) => toggleGroup(group.tools, !(e.currentTarget as HTMLInputElement).checked)}
-							/>
-						{/if}
+						<div class="mt-3 space-y-2">
+							{#each groupEntry.tools as tool (tool.name)}
+								<label class="flex items-start justify-between gap-3 rounded-lg bg-base-300/30 px-3 py-2">
+									<span>
+										<span class="block text-sm font-medium">{tool.name}</span>
+										<span class="block text-xs text-base-content/45">{tool.description}</span>
+									</span>
+									<input
+										type="checkbox"
+										class="checkbox checkbox-sm checkbox-secondary mt-0.5"
+										checked={isToolApprovalRequired(tool.name)}
+										onchange={(e) => toggleToolApproval(tool.name, (e.currentTarget as HTMLInputElement).checked)}
+									/>
+								</label>
+							{/each}
+						</div>
 					</div>
 				{/each}
 			</div>
@@ -547,17 +528,17 @@
 					<p class="text-sm font-medium">Task completed</p>
 					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.taskCompleted} />
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 				<div class="flex items-center justify-between gap-4 py-3">
 					<p class="text-sm font-medium">Needs input</p>
 					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.needsInput} />
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 				<div class="flex items-center justify-between gap-4 py-3">
 					<p class="text-sm font-medium">Dream summary</p>
 					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.dreamSummary} />
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 				<div class="flex items-center justify-between gap-4 py-3">
 					<p class="text-sm font-medium">Agent errors</p>
 					<input type="checkbox" class="toggle toggle-accent toggle-sm" bind:checked={settings.notificationPrefs.agentErrors} />
@@ -596,7 +577,7 @@
 						/>
 					</div>
 				</div>
-				<div class="border-t border-base-content/[.06]"></div>
+				<div class="border-t border-base-content/6"></div>
 				<div class="flex items-center justify-between gap-4 py-3.5">
 					<p class="text-sm font-medium">Monthly limit</p>
 					<div class="flex items-center gap-1.5">
@@ -645,7 +626,7 @@
 					{installAvailable ? 'Install' : 'Installed'}
 				</button>
 			</div>
-			<div class="border-t border-base-content/[.06]"></div>
+			<div class="border-t border-base-content/6"></div>
 
 			<!-- Push -->
 			<div class="flex items-center justify-between gap-4 py-3.5">

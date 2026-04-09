@@ -20,7 +20,6 @@
 	import LiveToolCallCard from '$lib/chat/LiveToolCallCard.svelte';
 	import ThinkingBlockCard from '$lib/chat/ThinkingBlockCard.svelte';
 	import AskUserModal from '$lib/chat/AskUserModal.svelte';
-	import PlanApprovalCard from '$lib/chat/PlanApprovalCard.svelte';
 	import SubagentBlockCard from '$lib/chat/SubagentBlockCard.svelte';
 	import { renderMarkdown } from '$lib/chat/chat';
 	import ArtifactPanel from '$lib/artifacts/ArtifactPanel.svelte';
@@ -78,14 +77,6 @@
 		expanded: boolean;
 	};
 
-	type PlanBlock = {
-		kind: 'plan';
-		id: string;
-		token: string;
-		status: 'pending' | 'approved' | 'denied' | 'continued';
-		tools: Array<{ id: string; name: string; argumentsText: string }>;
-	};
-
 	type SubagentBlock = {
 		kind: 'subagent';
 		id: string;
@@ -99,7 +90,7 @@
 		expanded: boolean;
 	};
 
-	type StreamingBlock = TextBlock | ToolBlock | ThinkingBlock | PlanBlock | SubagentBlock;
+	type StreamingBlock = TextBlock | ToolBlock | ThinkingBlock | SubagentBlock;
 
 	const conversationId = $derived(page.params.id ?? '');
 	let model = $state('anthropic/claude-sonnet-4');
@@ -142,11 +133,6 @@
 				kind: 'toolApproval';
 				token: string;
 				approved: boolean;
-		  }
-		| {
-				kind: 'planDecision';
-				token: string;
-				decision: 'approve' | 'deny' | 'continue';
 		  }
 		| {
 				kind: 'askUser';
@@ -208,10 +194,6 @@
 				} else {
 					await denyToolCall(intent.token);
 				}
-				return;
-			}
-			if (intent.kind === 'planDecision') {
-				await decidePlan(intent.token, intent.decision);
 				return;
 			}
 			if (intent.kind === 'askUser') {
@@ -509,13 +491,6 @@
 						reasoningTokens: block.reasoningTokens ?? null,
 					};
 				}
-				if (block.kind === 'plan') {
-					return {
-						kind: 'plan' as const,
-						status: block.status,
-						tools: block.tools,
-					};
-				}
 				if (block.kind === 'subagent') {
 					return {
 						kind: 'subagent' as const,
@@ -588,9 +563,7 @@
 				? `${b.id}:${b.status}:${b.expanded}:${b.result?.length ?? 0}`
 				: b.kind === 'thinking'
 					? `${b.id}:${b.content.length}:${b.reasoningTokens ?? 0}`
-					: b.kind === 'plan'
-						? `${b.id}:${b.status}:${b.tools.length}`
-						: `${b.id}:${b.content.length}`
+					: `${b.id}:${b.content.length}`
 		).join('|');
 		scrollToBottom();
 	});
@@ -890,40 +863,6 @@
 		}
 	}
 
-	async function decidePlan(token: string, decision: 'approve' | 'deny' | 'continue') {
-		try {
-			const response = await fetch(`/chat/${conversationId}/plan-decide`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ token, decision }),
-			});
-			if (!response.ok) {
-				throw new Error(`Plan decision request failed with status ${response.status}`);
-			}
-			clearRecoverableError();
-			streamingBlocks = streamingBlocks.map((b) =>
-				b.kind === 'plan' && b.token === token
-					? {
-							...b,
-							status:
-								decision === 'approve'
-									? ('approved' as const)
-									: decision === 'continue'
-										? ('continued' as const)
-										: ('denied' as const),
-					  }
-					: b,
-			);
-		} catch (error) {
-			setRecoverableError(
-				error instanceof Error ? error.message : 'Failed to submit plan decision',
-				{ kind: 'planDecision', token, decision },
-				{ token, decision, action: 'decidePlan' }
-			);
-			throw error;
-		}
-	}
-
 	function buildAskUserAnswersFromFreeform(freeform: string): Record<string, string> {
 		if (!pendingAskUser) return {};
 		const trimmed = freeform.trim();
@@ -1091,45 +1030,6 @@
 					if (eventName === 'reasoning') {
 						waitingForFirstToken = false;
 						appendThinkingContent(payload.content ?? '');
-					}
-
-					if (eventName === 'plan_pending') {
-						waitingForFirstToken = false;
-						finalizeCurrentThinkingBlock();
-						finalizeCurrentTextBlock();
-						streamingBlocks = [
-							...streamingBlocks,
-							{
-								kind: 'plan' as const,
-								id: `plan-${payload.token}`,
-								token: payload.token,
-								status: 'pending' as const,
-								tools: Array.isArray(payload.tools)
-									? payload.tools.map((tool: { id?: string; name?: string; arguments?: string }) => ({
-											id: tool.id ?? `tool-${Math.random().toString(36).slice(2)}`,
-											name: tool.name ?? 'unknown',
-											argumentsText: tool.arguments ?? '',
-									  }))
-									: [],
-							},
-						];
-					}
-
-					if (eventName === 'plan_decision') {
-						const decision = payload.decision as 'approve' | 'deny' | 'continue' | undefined;
-						streamingBlocks = streamingBlocks.map((b) =>
-							b.kind === 'plan' && b.token === payload.token
-								? {
-										...b,
-										status:
-											decision === 'approve'
-												? ('approved' as const)
-												: decision === 'continue'
-													? ('continued' as const)
-													: ('denied' as const),
-								  }
-								: b,
-						);
 					}
 
 					if (eventName === 'tool_pending') {
@@ -1534,15 +1434,6 @@
 									expanded={block.expanded}
 								/>
 							</div>
-						{:else if block.kind === 'plan'}
-							<PlanApprovalCard
-								token={block.token}
-								tools={block.tools}
-								status={block.status}
-								onApprove={(token) => decidePlan(token, 'approve')}
-								onDeny={(token) => decidePlan(token, 'deny')}
-								onContinue={(token) => decidePlan(token, 'continue')}
-							/>
 						{:else if block.kind === 'subagent'}
 							<SubagentBlockCard
 								agentName={block.agentName}

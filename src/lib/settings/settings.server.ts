@@ -26,8 +26,7 @@ export const DEFAULT_SETTINGS = {
 		compactionModel: 'openai/gpt-4o-mini',
 	},
 	toolConfig: {
-		approvalMode: 'auto' as const,
-		disabledTools: [] as string[],
+		approvalRequiredTools: [] as string[],
 	},
 	theme: 'AgentStudio-night',
 } as const
@@ -84,11 +83,24 @@ export async function updateSettings(input: {
 		compactionModel?: string
 	}
 	toolConfig?: {
-		approvalMode?: 'auto' | 'confirm' | 'plan'
-		disabledTools?: string[]
+		approvalRequiredTools?: string[]
 	}
 }) {
 	const current = await getOrCreateSettings(input.userId)
+	const currentToolConfig =
+		(current.toolConfig as
+			| {
+					approvalRequiredTools?: string[]
+					approvalMode?: 'auto' | 'confirm' | 'plan'
+					disabledTools?: string[]
+			  }
+			| undefined) ?? {}
+
+	const migratedApprovalRequiredTools = Array.isArray(currentToolConfig.approvalRequiredTools)
+		? currentToolConfig.approvalRequiredTools
+		: currentToolConfig.approvalMode === 'confirm'
+			? ['*']
+			: []
 	const [updated] = await db
 		.update(appSettings)
 		.set({
@@ -113,7 +125,7 @@ export async function updateSettings(input: {
 				...(input.contextConfig ?? {}),
 			},
 			toolConfig: {
-				...((current.toolConfig as typeof DEFAULT_SETTINGS.toolConfig | undefined) ?? DEFAULT_SETTINGS.toolConfig),
+				approvalRequiredTools: migratedApprovalRequiredTools,
 				...(input.toolConfig ?? {}),
 			},
 			updatedAt: new Date(),

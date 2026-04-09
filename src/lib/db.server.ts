@@ -41,6 +41,13 @@ const MIGRATIONS_SCHEMA = 'drizzle'
 const MIGRATIONS_TABLE = '__drizzle_migrations'
 
 const QUIET_DB_NOTICE_CODES = new Set(['01000', '42710', '42P06', '42P07'])
+const RECOVERABLE_MIGRATION_ERROR_CODES = new Set([
+	'42P01', // undefined_table
+	'42P07', // duplicate_table
+	'42701', // duplicate_column
+	'42704', // undefined_object
+	'42710', // duplicate_object
+])
 
 type PostgresNotice = {
 	code?: string
@@ -94,6 +101,24 @@ function getRuntimeClient() {
 	}
 
 	return client
+}
+
+function getPostgresErrorCode(error: unknown): string | null {
+	if (!error || typeof error !== 'object') {
+		return null
+	}
+
+	const record = error as Record<string, unknown>
+	if (typeof record.code === 'string') {
+		return record.code
+	}
+
+	return getPostgresErrorCode(record.cause)
+}
+
+function isRecoverableMigrationError(error: unknown) {
+	const code = getPostgresErrorCode(error)
+	return code ? RECOVERABLE_MIGRATION_ERROR_CODES.has(code) : false
 }
 
 function getTargetDatabaseName(databaseUrl: string) {
@@ -293,14 +318,36 @@ async function bootstrapDatabase() {
 			console.log('[db] Applying migrations')
 		}
 
-		const bootstrapDb = createDatabase(client)
-		await migrate(bootstrapDb, {
+		const migrationConfig = {
 			migrationsFolder: getMigrationsFolder(),
 			migrationsSchema: MIGRATIONS_SCHEMA,
 			migrationsTable: MIGRATIONS_TABLE,
-		})
+		}
 
-		if (createdDatabase || resetLegacySchema || hasPendingMigrations) {
+		let recoveredFromDrift = false
+
+		try {
+			const bootstrapDb = createDatabase(client)
+			await migrate(bootstrapDb, migrationConfig)
+		} catch (migrationError) {
+			const shouldAttemptRecovery = process.env.NODE_ENV !== 'production' && isRecoverableMigrationError(migrationError)
+
+			if (!shouldAttemptRecovery) {
+				throw migrationError
+			}
+
+			recoveredFromDrift = true
+			console.warn(
+				'[db] Migration drift detected; resetting app schemas and retrying migrations once (development only)',
+			)
+			await resetAppSchemas()
+			await ensureRequiredExtensions()
+
+			const retryDb = createDatabase(client)
+			await migrate(retryDb, migrationConfig)
+		}
+
+		if (createdDatabase || resetLegacySchema || hasPendingMigrations || recoveredFromDrift) {
 			console.log('[db] Database bootstrapped and ready')
 		} else {
 			console.log('[db] Database ready')

@@ -2,13 +2,7 @@ import { and, desc, eq, inArray, isNull, isNotNull } from 'drizzle-orm'
 import { db } from '$lib/db.server'
 import { chatRuns } from '$lib/chat/chat.schema'
 
-export const ACTIVE_CHAT_RUN_STATES = [
-	'queued',
-	'running',
-	'waiting_tool_approval',
-	'waiting_user_input',
-	'waiting_plan_decision',
-] as const
+export const ACTIVE_CHAT_RUN_STATES = ['queued', 'running', 'waiting_tool_approval', 'waiting_user_input'] as const
 
 export type ActiveChatRunState = (typeof ACTIVE_CHAT_RUN_STATES)[number]
 

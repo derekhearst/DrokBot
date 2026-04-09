@@ -46,15 +46,14 @@ const settingsUpdateSchema = z.object({
 		.optional(),
 	toolConfig: z
 		.object({
-			approvalMode: z.enum(['auto', 'confirm', 'plan']).optional(),
-			disabledTools: z.array(z.string()).optional(),
+			approvalRequiredTools: z.array(z.string()).optional(),
 		})
 		.optional(),
 	systemPrompt: z.string().max(12000).optional(),
 })
 
-const disabledToolsSchema = z.object({
-	disabledTools: z.array(z.string()),
+const approvalRequiredToolsSchema = z.object({
+	approvalRequiredTools: z.array(z.string()),
 })
 
 export const getSettings = query(async () => {
@@ -67,10 +66,13 @@ export const updateAppSettings = command(settingsUpdateSchema, async (input) => 
 	return updateSettings({ ...input, userId: user.id })
 })
 
-export const updateDisabledToolsCommand = command(disabledToolsSchema, async ({ disabledTools }) => {
-	const user = requireAuthenticatedRequestUser()
-	return updateSettings({ userId: user.id, toolConfig: { disabledTools } })
-})
+export const updateApprovalRequiredToolsCommand = command(
+	approvalRequiredToolsSchema,
+	async ({ approvalRequiredTools }) => {
+		const user = requireAuthenticatedRequestUser()
+		return updateSettings({ userId: user.id, toolConfig: { approvalRequiredTools } })
+	},
+)
 
 export const resetAppSettings = command(async () => {
 	const user = requireAuthenticatedRequestUser()
@@ -103,10 +105,7 @@ export const getFullPromptPreview = query(async () => {
 		if (skillList) sections.push(`Available skills (use read_skill to load full content when relevant):\n${skillList}`)
 		const systemPrompt = sections.join('\n\n')
 
-		const disabledTools = new Set(
-			(settings.toolConfig as { disabledTools?: string[] } | undefined)?.disabledTools ?? [],
-		)
-		const tools = getToolDefinitions().filter((tool) => !disabledTools.has(tool.function.name))
+		const tools = getToolDefinitions()
 		const toolsJson = JSON.stringify(tools, null, 2)
 
 		const rawParts: Array<{ label: string; content: string }> = []
@@ -135,7 +134,8 @@ export const getFullPromptPreview = query(async () => {
 	return {
 		model: settings.defaultModel,
 		availableCapabilityGroups: Object.entries(capabilityGroups).map(([key, group]) => ({ key, label: group.label })),
-		toolApprovalMode: (settings.toolConfig as { approvalMode?: string } | undefined)?.approvalMode ?? 'auto',
+		approvalRequiredTools:
+			(settings.toolConfig as { approvalRequiredTools?: string[] } | undefined)?.approvalRequiredTools ?? [],
 		scenarios: {
 			simple: buildScenario('Simple Query'),
 			complex: buildScenario('Complex Query'),

@@ -11,7 +11,7 @@
 	type LiveRun = {
 		id: string;
 		conversationId: string;
-		state: 'queued' | 'running' | 'waiting_tool_approval' | 'waiting_user_input' | 'waiting_plan_decision';
+		state: 'queued' | 'running' | 'waiting_tool_approval' | 'waiting_user_input';
 		label?: string | null;
 		lastHeartbeatAt?: string | Date | null;
 		updatedAt?: string | Date | null;
@@ -46,8 +46,6 @@
 				return 'Needs approval';
 			case 'waiting_user_input':
 				return 'Waiting for you';
-			case 'waiting_plan_decision':
-				return 'Plan pending';
 			default:
 				return 'Running';
 		}

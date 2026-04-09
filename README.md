@@ -8,7 +8,7 @@ Self-hosted autonomous AI agent platform with persistent memory, user-scoped too
 
 AgentStudio provides a streaming chat interface where the assistant can call tools such as web search and sandboxed code execution. The filesystem toolset supports ranged file reads, full writes, unified-diff patch apply, deterministic string replace, recursive directory listing, search, move/rename, delete, and file metadata lookups. Chat supports editing and branching, interleaved tool and thinking blocks, per-message performance and cost metrics, model selection, and per-prompt reasoning effort selection.
 
-Creation workflows are chat-led: New Agent and New Skill actions launch a fresh conversation with a seeded creation prompt. The assistant runs a cooperative planning flow (asks follow-up questions first, optionally with ask_user), presents an execution plan card, and only executes tool calls after explicit plan approval.
+Creation workflows are chat-led: New Agent and New Skill actions launch a fresh conversation with a seeded creation prompt. The assistant gathers missing requirements (optionally with ask_user), then executes directly with tool-level approvals where configured.
 
 ### Agents
 
@@ -23,9 +23,9 @@ Dreaming Agent is a real visible agent that owns memory consolidation work. Its 
 
 ### Settings
 
-Settings persist default model, theme, notification preferences, tool availability toggles by capability group, context window configuration, and budget limits.
+Settings persist default model, theme, notification preferences, per-tool approval requirements, context window configuration, and budget limits.
 
-Tool execution has three approval modes: `auto`, `confirm`, and `plan` (plan-first). In plan-first mode, tool calls are grouped into a plan and require Approve, Cancel, or Continue Planning before execution.
+Tool execution approvals are configured per tool in Settings. Tools marked for approval pause execution until approved.
 
 ### Database Bootstrap
 

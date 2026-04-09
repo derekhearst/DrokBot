@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { env } from '$env/dynamic/private'
 import { getRequestEvent } from '$app/server'
+import { error } from '@sveltejs/kit'
 import type { Cookies } from '@sveltejs/kit'
 import { and, eq, gt, isNull } from 'drizzle-orm'
 import { db } from '$lib/db.server'
@@ -201,7 +202,7 @@ export async function touchUserLastLogin(userId: string) {
 export function requireAuthenticatedRequestUser() {
 	const event = getRequestEvent()
 	if (!event.locals.user) {
-		throw new Error('Not authenticated')
+		throw error(401, 'Not authenticated')
 	}
 	return event.locals.user
 }
@@ -209,7 +210,7 @@ export function requireAuthenticatedRequestUser() {
 export function requireAdminRequestUser() {
 	const user = requireAuthenticatedRequestUser()
 	if (user.role !== 'admin') {
-		throw new Error('Admin access required')
+		throw error(403, 'Admin access required')
 	}
 	return user
 }

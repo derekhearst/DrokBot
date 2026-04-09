@@ -39,13 +39,7 @@ const savePartialAssistantSchema = z.object({
 
 export const getConversations = query(async () => {
 	const user = requireAuthenticatedRequestUser()
-	const activeStates = new Set([
-		'queued',
-		'running',
-		'waiting_tool_approval',
-		'waiting_user_input',
-		'waiting_plan_decision',
-	])
+	const activeStates = new Set(['queued', 'running', 'waiting_tool_approval', 'waiting_user_input'])
 	const rows = await db
 		.select()
 		.from(conversations)

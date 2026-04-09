@@ -11,11 +11,11 @@ type GuidedCreationInput = {
 
 function buildPrompt({ kind, context = {} }: GuidedCreationInput) {
 	const commonRules = [
-		'Help me create this using a cooperative planning flow.',
+		'Help me create this using a cooperative execution flow.',
 		'First ask clarifying questions one at a time if needed, using ask_user when options are helpful.',
-		'Do not execute any tool calls until I approve the final plan card.',
-		'When ready, present a concise execution plan for approval.',
-		'After approval, execute only the approved plan and summarize what was created.',
+		'Execute tool calls directly as needed once requirements are clear.',
+		'If user input is missing, ask for it and then continue execution.',
+		'Summarize what was created and any follow-up options.',
 	]
 
 	const contextLine = Object.entries(context)
@@ -29,7 +29,7 @@ function buildPrompt({ kind, context = {} }: GuidedCreationInput) {
 		return [
 			'Create a new agent for me.',
 			...commonRules,
-			'Gather name, role, model, and system prompt preferences before producing the execution plan.',
+			'Gather name, role, model, and system prompt preferences before creating the agent.',
 			scopedContext,
 		].join(' ')
 	}
@@ -37,7 +37,7 @@ function buildPrompt({ kind, context = {} }: GuidedCreationInput) {
 	return [
 		'Create a new reusable skill for me.',
 		...commonRules,
-		'Gather skill name, description, tags, and main markdown content goals before proposing execution.',
+		'Gather skill name, description, tags, and main markdown content goals before creating files.',
 		scopedContext,
 	].join(' ')
 }

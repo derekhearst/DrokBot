@@ -1,1 +1,1 @@
-DROP TABLE "dream_cycles" CASCADE;
+DROP TABLE IF EXISTS "dream_cycles" CASCADE;

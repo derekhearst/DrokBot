@@ -14,7 +14,6 @@ import { logLlmUsage } from '$lib/cost/usage'
 import { getOrCreateSettings } from '$lib/settings/settings.server'
 import { requestApproval } from '$lib/tools/tools.server'
 import { requestUserQuestions, toolSchemas } from '$lib/tools/tools.server'
-import { requestPlanDecision } from '$lib/tools/tools.server'
 import { listSkillSummaries } from '$lib/skills/skills.server'
 import { trimHistoricalToolResults, trimToolResult } from '$lib/chat/chat'
 import { buildOrchestratorPrompt } from '$lib/agents/orchestrator'
@@ -187,8 +186,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const userContent = body.content?.trim() ?? ''
 
 	// --- Context Engineering: Unified System Prompt ---
-	const toolConfig = currentSettings.toolConfig as { approvalMode?: string; disabledTools?: string[] } | undefined
-	const disabledTools = new Set(toolConfig?.disabledTools ?? [])
+	const toolConfig = currentSettings.toolConfig as
+		| {
+				approvalRequiredTools?: string[]
+				approvalMode?: string
+		  }
+		| undefined
+	const approvalRequiredTools = new Set(
+		toolConfig?.approvalRequiredTools ?? (toolConfig?.approvalMode === 'confirm' ? ['*'] : []),
+	)
 
 	// --- Context Engineering: Conditional Memory ---
 	const fetchMemory = shouldFetchMemory(userContent)
@@ -240,15 +246,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (currentSettings.systemPrompt?.trim()) {
 		// systemPrompt deprecated ΓÇô memory layers will replace this
 	}
-	systemSections.push(
-		[
-			'Tool usage policy:',
-			'- If the user asks you to ask questions, gather preferences with options, or confirm choices before continuing, you MUST call the ask_user tool.',
-			"- Do not only say you'll ask a question in plain text when ask_user is appropriate.",
-			'- Use concise questions with clear option labels, and allow freeform input when the request is open-ended.',
-			'- For ask_user: aim for ~3 prefilled answer options per question. Prefer asking more focused questions (split complex choices across multiple questions) rather than listing many options in one question.',
-		].join('\n'),
-	)
+	if (isOrchestrator) {
+		systemSections.push(
+			[
+				'Tool usage policy:',
+				'- If the user asks you to ask questions, gather preferences with options, or confirm choices before continuing, you MUST call the ask_user tool.',
+				"- Do not only say you'll ask a question in plain text when ask_user is appropriate.",
+				'- Use concise questions with clear option labels, and allow freeform input when the request is open-ended.',
+				'- For ask_user: aim for ~3 prefilled answer options per question. Prefer asking more focused questions (split complex choices across multiple questions) rather than listing many options in one question.',
+			].join('\n'),
+		)
+	} else {
+		systemSections.push(
+			[
+				'Tool usage policy:',
+				'- You cannot call ask_user directly in agent conversations.',
+				'- If you need user input, summarize missing information and return control to orchestrator for follow-up.',
+			].join('\n'),
+		)
+	}
 	if (skillSummariesText) {
 		systemSections.push(`Available skills (use read_skill to load full content when relevant):\n${skillSummariesText}`)
 	}
@@ -285,14 +301,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	// --- Context Engineering: Tool Loading ---
 	let tools = getToolDefinitions()
-		.filter((tool) => !disabledTools.has(tool.function.name))
+		.filter((tool) => (isOrchestrator ? true : tool.function.name !== 'ask_user'))
 		.filter((tool) =>
 			scopedAgentTools ? scopedAgentTools.includes(tool.function.name) : !DREAMING_ONLY_TOOLS.has(tool.function.name),
 		)
 	// No hard limit ΓÇö loop exits when the model stops calling tools
 	const MAX_TOOL_ROUNDS = 50
 
-	const toolApprovalMode = toolConfig?.approvalMode ?? 'auto'
 	const [run] = await db
 		.insert(chatRuns)
 		.values({
@@ -382,6 +397,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				let reasoningTokens: number | null = null
 
 				for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+					void round
 					const stream = await streamChat(currentMessages, routedModel, tools, reasoningConfig)
 
 					// Accumulated tool calls for this round (streamed piecewise)
@@ -492,99 +508,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						break
 					}
 
-					if (toolApprovalMode === 'plan') {
-						const planToken = crypto.randomUUID()
-						await updateRun({ state: 'waiting_plan_decision', label: 'Waiting for plan decision' })
-						emit('plan_pending', {
-							token: planToken,
-							round,
-							tools: plannedToolCalls.map((tc) => ({
-								id: tc.id,
-								name: tc.name,
-								arguments: tc.arguments,
-								preview: tc.parsedArgs,
-							})),
-						})
-
-						const decision = await requestPlanDecision(planToken)
-						const normalizedDecision = decision ?? 'deny'
-						await updateRun({ state: 'running', label: 'Resuming execution', heartbeat: true })
-						emit('plan_decision', {
-							token: planToken,
-							decision: normalizedDecision,
-						})
-
-						if (normalizedDecision === 'continue') {
-							currentMessages.push({
-								role: 'assistant',
-								content: assistantContent || '',
-								reasoning: assistantReasoning || undefined,
-								reasoningDetails: assistantReasoningDetails.length ? assistantReasoningDetails : undefined,
-							})
-							currentMessages.push({
-								role: 'user',
-								content:
-									'Continue planning only. Do not execute tools yet. Ask clarifying questions if needed and then provide an updated execution plan.',
-							})
-							continue
-						}
-
-						if (normalizedDecision === 'deny') {
-							const deniedResult = 'Planned execution was canceled by the user.'
-							const deniedToolResults: Array<{ call_id: string; name: string; result: string }> = plannedToolCalls.map(
-								(tc) => ({
-									call_id: tc.id,
-									name: tc.name,
-									result: deniedResult,
-								}),
-							)
-
-							for (const tc of plannedToolCalls) {
-								allToolCalls.push({
-									name: tc.name,
-									arguments: tc.parsedArgs,
-									result: { denied: true, reason: deniedResult },
-									executionMs: 0,
-								})
-								streamBlocks.push({
-									kind: 'tool',
-									name: tc.name,
-									arguments: tc.parsedArgs,
-									result: { denied: true, reason: deniedResult },
-									success: false,
-									executionMs: 0,
-								})
-							}
-
-							currentMessages.push({
-								role: 'assistant',
-								content: assistantContent || '',
-								reasoning: assistantReasoning || undefined,
-								reasoningDetails: assistantReasoningDetails.length ? assistantReasoningDetails : undefined,
-								toolCalls: validToolCalls.map((tc) => ({
-									id: tc.id,
-									type: 'function' as const,
-									function: { name: tc.name, arguments: tc.arguments },
-								})),
-							})
-							for (const tr of deniedToolResults) {
-								currentMessages.push({
-									role: 'tool',
-									content: tr.result,
-									toolCallId: tr.call_id,
-								})
-							}
-							continue
-						}
-					}
-
 					// Execute each tool call
 					const toolResults: Array<{ call_id: string; name: string; result: string }> = []
 					for (const tc of plannedToolCalls) {
 						const parsedArgs = tc.parsedArgs
 
-						// If approval mode is 'confirm', pause and wait for user decision
-						if (toolApprovalMode === 'confirm') {
+						const requiresApproval = approvalRequiredTools.has('*') || approvalRequiredTools.has(tc.name)
+
+						if (requiresApproval) {
 							const approvalToken = crypto.randomUUID()
 							await updateRun({ state: 'waiting_tool_approval', label: `Waiting for approval: ${tc.name}` })
 							emit('tool_pending', {
@@ -615,40 +546,40 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 							}
 						}
 
-						if (disabledTools.has(tc.name)) {
-							const deniedMessage = `Tool '${tc.name}' is disabled in settings.`
-							emit('tool_denied', {
-								id: tc.id,
-								name: tc.name,
-								reason: deniedMessage,
-							})
-							allToolCalls.push({
-								name: tc.name,
-								arguments: parsedArgs,
-								result: { denied: true, reason: deniedMessage },
-								executionMs: 0,
-							})
-							toolResults.push({ call_id: tc.id, name: tc.name, result: deniedMessage })
-							streamBlocks.push({
-								kind: 'tool',
-								name: tc.name,
-								arguments: parsedArgs,
-								result: { denied: true },
-								success: false,
-								executionMs: 0,
-							})
-							streamBlocks.push({
-								kind: 'tool',
-								name: tc.name,
-								arguments: parsedArgs,
-								result: { denied: true, reason: deniedMessage },
-								success: false,
-								executionMs: 0,
-							})
-							continue
-						}
-
 						if (tc.name === 'ask_user') {
+							if (!isOrchestrator) {
+								const resultStr = trimToolResult(
+									tc.name,
+									JSON.stringify({
+										error:
+											'Agents cannot ask users directly. Return this question to the orchestrator to gather user input, then resume the agent with those answers.',
+									}),
+								)
+								emit('tool_result', {
+									id: tc.id,
+									name: tc.name,
+									success: false,
+									executionMs: 0,
+									result: resultStr,
+								})
+								toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
+								allToolCalls.push({
+									name: tc.name,
+									arguments: parsedArgs,
+									result: { denied: true, reason: 'ask_user is restricted to orchestrator conversations' },
+									executionMs: 0,
+								})
+								streamBlocks.push({
+									kind: 'tool',
+									name: tc.name,
+									arguments: parsedArgs,
+									result: { denied: true, reason: 'ask_user is restricted to orchestrator conversations' },
+									success: false,
+									executionMs: 0,
+								})
+								continue
+							}
+
 							let input: {
 								questions: Array<{
 									header: string
@@ -744,7 +675,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 										user.id,
 										body.conversationId,
 										safeController,
-										disabledTools,
 									)
 									const resultStr = trimToolResult(
 										tc.name,

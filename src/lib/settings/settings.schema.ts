@@ -40,11 +40,10 @@ export const appSettings = pgTable('app_settings', {
 		.default({ reservedResponsePct: 30, autoCompactThresholdPct: 72, compactionModel: 'openai/gpt-4o-mini' }),
 	toolConfig: jsonb('tool_config')
 		.$type<{
-			approvalMode: 'auto' | 'confirm' | 'plan'
-			disabledTools: string[]
+			approvalRequiredTools: string[]
 		}>()
 		.notNull()
-		.default({ approvalMode: 'auto', disabledTools: [] }),
+		.default({ approvalRequiredTools: [] }),
 	systemPrompt: text('system_prompt').notNull().default(''), // deprecated – kept for migration compat
 	theme: text('theme').notNull().default('AgentStudio-night'),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

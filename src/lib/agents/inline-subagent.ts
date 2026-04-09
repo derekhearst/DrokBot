@@ -3,7 +3,13 @@ import { db } from '$lib/db.server'
 import { agents } from '$lib/agents/agents.schema'
 import { chatRuns, conversations, messages } from '$lib/chat/chat.schema'
 import { streamChat, type LlmMessage } from '$lib/openrouter.server'
-import { executeTool, getToolDefinitions, type ToolCallWithContext, type ToolName } from '$lib/tools/tools.server'
+import {
+	executeTool,
+	getToolDefinitions,
+	toolSchemas,
+	type ToolCallWithContext,
+	type ToolName,
+} from '$lib/tools/tools.server'
 import { logLlmUsage } from '$lib/cost/usage'
 import { trimToolResult } from '$lib/chat/chat'
 import { listSkillSummaries } from '$lib/skills/skills.server'
@@ -30,7 +36,6 @@ export async function runInlineSubagent(
 	userId: string,
 	parentConversationId: string,
 	controller: ReadableStreamDefaultController<Uint8Array>,
-	disabledTools: Set<string>,
 ): Promise<{ result: string; conversationId: string; cost: string }> {
 	const [agent] = await db.select().from(agents).where(eq(agents.id, step.agentId)).limit(1)
 	if (!agent) {
@@ -118,6 +123,14 @@ export async function runInlineSubagent(
 
 	// Build sub-agent context
 	const systemSections = [agent.systemPrompt, `Your role: ${agent.role}`]
+	systemSections.push(
+		[
+			'Agent collaboration policy:',
+			'- You cannot ask the user directly with ask_user.',
+			'- If you need user input, return a concise handoff for orchestrator with missing information and proposed options.',
+			'- Once orchestrator returns answers in context, continue execution immediately.',
+		].join('\n'),
+	)
 
 	const skillSummaries = await listSkillSummaries()
 	if (skillSummaries.length > 0) {
@@ -135,7 +148,7 @@ export async function runInlineSubagent(
 		{ role: 'user', content: step.task },
 	]
 
-	const tools = getToolDefinitions().filter((t) => !disabledTools.has(t.function.name))
+	const tools = getToolDefinitions().filter((t) => t.function.name !== 'ask_user')
 	const MAX_ROUNDS = 20
 	let totalContent = ''
 	let promptTokens = 0
@@ -211,6 +224,28 @@ export async function runInlineSubagent(
 					parsedArgs = JSON.parse(tc.arguments)
 				} catch {
 					parsedArgs = {}
+				}
+
+				if (tc.name === 'ask_user') {
+					const parsed = toolSchemas.ask_user.safeParse(parsedArgs)
+					const handoff = {
+						requiresOrchestratorInput: true,
+						reason: 'Subagents cannot call ask_user directly.',
+						questions: parsed.success ? parsed.data.questions : [],
+					}
+					const resultStr = trimToolResult(tc.name, JSON.stringify(handoff))
+					toolResults.push({ call_id: tc.id, name: tc.name, result: resultStr })
+
+					controller.enqueue(
+						sse('subagent_tool_result', {
+							agentId: agent.id,
+							conversationId: subConversation.id,
+							name: tc.name,
+							success: false,
+							executionMs: 0,
+						}),
+					)
+					continue
 				}
 
 				await updateRun({ state: 'running', label: `Subagent ${agent.name} executing ${tc.name}`, heartbeat: true })
